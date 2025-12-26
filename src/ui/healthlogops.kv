@@ -1,0 +1,944 @@
+# HealthLogOps Kivy Design Language File
+# Declarative UI definitions for the Health Activity Tracker
+# Complete UI with Material Design 3
+
+#:kivy 2.3
+#:import dp kivy.metrics.dp
+#:import sp kivy.metrics.sp
+#:import Window kivy.core.window.Window
+#:import StyledDropdown ui.components.dropdown.StyledDropdown
+#:import ActivitySuggestionField ui.components.suggestion_field.ActivitySuggestionField
+
+# ============================================================
+# COLOR SCHEME (Teal/Cyan Theme with Warm Accents)
+# ============================================================
+# Primary: Teal (#009688)
+# Primary Dark: #00796B
+# Primary Light: #B2DFDB
+# Accent: Amber (#FFC107)
+# Background: #F5F7FA
+# Surface: #FFFFFF
+
+# ============================================================
+# HOME SCREEN
+# ============================================================
+<HomeScreen>:
+    name: "home"
+    logs_container: logs_container
+    filter_container: filter_container
+    md_bg_color: (0.96, 0.97, 0.98, 1)
+
+    FloatLayout:
+        MDBoxLayout:
+            orientation: "vertical"
+            size_hint: 1, 1
+            pos_hint: {"top": 1}
+
+            # ========== TOP APP BAR ==========
+            MDBoxLayout:
+                orientation: "vertical"
+                size_hint_y: None
+                height: dp(130)
+                md_bg_color: (0, 0.59, 0.53, 1)
+                padding: [dp(20), dp(12), dp(20), dp(16)]
+
+                # Top row with title and settings
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    size_hint_y: None
+                    height: dp(44)
+
+                    MDLabel:
+                        text: "HealthLog"
+                        font_style: "Display"
+                        role: "small"
+                        bold: True
+                        theme_text_color: "Custom"
+                        text_color: (1, 1, 1, 1)
+                        halign: "left"
+                        valign: "middle"
+
+                    Widget:
+                        size_hint_x: None
+                        width: dp(8)
+
+                    MDIconButton:
+                        icon: "cog-outline"
+                        theme_icon_color: "Custom"
+                        icon_color: (1, 1, 1, 0.9)
+                        on_release: app.open_settings()
+
+                # Subtitle
+                MDLabel:
+                    text: "Track your health journey"
+                    theme_text_color: "Custom"
+                    text_color: (1, 1, 1, 0.75)
+                    size_hint_y: None
+                    height: dp(24)
+
+                Widget:
+                    size_hint_y: 1
+
+                # Stats summary bar
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    size_hint_y: None
+                    height: dp(28)
+
+                    MDLabel:
+                        id: today_count_label
+                        text: "Today: 0 logs"
+                        theme_text_color: "Custom"
+                        text_color: (1, 1, 1, 0.9)
+                        font_style: "Label"
+                        role: "large"
+
+            # ========== LOGS SECTION ==========
+            MDBoxLayout:
+                orientation: "vertical"
+                padding: [dp(16), dp(12), dp(16), dp(0)]
+                spacing: dp(8)
+
+                # Section Header
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    size_hint_y: None
+                    height: dp(32)
+                    spacing: dp(6)
+
+                    MDIcon:
+                        icon: "format-list-bulleted"
+                        theme_icon_color: "Custom"
+                        icon_color: (0, 0.49, 0.45, 1)
+                        pos_hint: {"center_y": 0.5}
+                        size_hint_x: None
+                        width: dp(24)
+
+                    MDLabel:
+                        text: "Logs"
+                        font_style: "Title"
+                        role: "large"
+                        bold: True
+                        theme_text_color: "Custom"
+                        text_color: (0.2, 0.2, 0.25, 1)
+                        pos_hint: {"center_y": 0.45}
+
+                    Widget:
+                        size_hint_x: 1
+
+                # Filter Chips Container (horizontal scroll)
+                MDScrollView:
+                    do_scroll_y: False
+                    do_scroll_x: True
+                    size_hint_y: None
+                    height: dp(40)
+                    bar_width: 0
+
+                    MDBoxLayout:
+                        id: filter_container
+                        orientation: "horizontal"
+                        spacing: dp(8)
+                        padding: [0, dp(4), dp(16), dp(4)]
+                        size_hint_x: None
+                        width: self.minimum_width
+
+                # Scrollable Logs Container
+                MDScrollView:
+                    do_scroll_x: False
+                    bar_width: dp(3)
+                    bar_color: (0, 0.59, 0.53, 0.4)
+
+                    MDBoxLayout:
+                        id: logs_container
+                        orientation: "vertical"
+                        spacing: dp(8)
+                        padding: [0, dp(4), 0, dp(80)]
+                        adaptive_height: True
+
+        # ========== FLOATING ACTION BUTTON (Bottom Right) ==========
+        MDFabButton:
+            icon: "plus"
+            style: "standard"
+            theme_bg_color: "Custom"
+            md_bg_color: (1, 0.76, 0.03, 1)
+            theme_icon_color: "Custom"
+            icon_color: (0.2, 0.15, 0, 1)
+            pos_hint: {"right": 0.95, "y": 0.02}
+            on_release: app.switch_to_add_log()
+
+
+# ============================================================
+# ADD LOG SCREEN
+# ============================================================
+<AddLogScreen>:
+    name: "add_log"
+    category_spinner: category_spinner
+    activity_field: activity_field
+    notes_field: notes_field
+    form_container: form_container
+    md_bg_color: (0.96, 0.97, 0.98, 1)
+
+    MDBoxLayout:
+        orientation: "vertical"
+
+        # ========== TOP APP BAR ==========
+        MDBoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: dp(56)
+            md_bg_color: (1, 1, 1, 1)
+            padding: [dp(4), 0, dp(12), 0]
+
+            canvas.before:
+                Color:
+                    rgba: 0, 0, 0, 0.06
+                Rectangle:
+                    pos: self.x, self.y - dp(1)
+                    size: self.width, dp(1)
+
+            MDIconButton:
+                icon: "arrow-left"
+                theme_icon_color: "Custom"
+                icon_color: (0.2, 0.2, 0.25, 1)
+                on_release: app.go_back()
+                pos_hint: {"center_y": 0.5}
+
+            MDLabel:
+                text: "Log Activity"
+                font_style: "Title"
+                role: "medium"
+                bold: True
+                theme_text_color: "Custom"
+                text_color: (0.2, 0.2, 0.25, 1)
+                pos_hint: {"center_y": 0.75}
+
+            Widget:
+                size_hint_x: 1
+
+            MDButton:
+                style: "filled"
+                theme_bg_color: "Custom"
+                md_bg_color: (0, 0.59, 0.53, 1)
+                on_release: root.save_log(); app.go_back()
+                pos_hint: {"center_y": 0.5}
+                size_hint_x: None
+                width: dp(80)
+
+                MDButtonText:
+                    text: "SAVE"
+                    theme_text_color: "Custom"
+                    text_color: (1, 1, 1, 1)
+
+        MDScrollView:
+            do_scroll_x: False
+
+            MDBoxLayout:
+                orientation: "vertical"
+                padding: dp(16)
+                spacing: dp(16)
+                adaptive_height: True
+
+                # ========== CATEGORY CARD ==========
+                MDCard:
+                    orientation: "vertical"
+                    padding: dp(16)
+                    spacing: dp(12)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    style: "elevated"
+                    theme_bg_color: "Custom"
+                    md_bg_color: (1, 1, 1, 1)
+                    theme_shadow_color: "Custom"
+                    shadow_color: (0, 0, 0, 0.04)
+                    shadow_softness: 8
+                    shadow_offset: (0, 2)
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(24)
+                        spacing: dp(6)
+
+                        MDIcon:
+                            icon: "shape-outline"
+                            theme_icon_color: "Custom"
+                            icon_color: (0, 0.59, 0.53, 1)
+                            size_hint_x: None
+                            width: dp(24)
+
+                        MDLabel:
+                            text: "Category"
+                            font_style: "Title"
+                            role: "small"
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: (0.2, 0.2, 0.25, 1)
+
+                    # Styled Category Dropdown
+                    StyledDropdown:
+                        id: category_spinner
+                        text: "Select Category"
+                        size_hint_y: None
+
+                # ========== ACTIVITY NAME CARD ==========
+                MDCard:
+                    orientation: "vertical"
+                    padding: dp(16)
+                    spacing: dp(12)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    style: "elevated"
+                    theme_bg_color: "Custom"
+                    md_bg_color: (1, 1, 1, 1)
+                    theme_shadow_color: "Custom"
+                    shadow_color: (0, 0, 0, 0.04)
+                    shadow_softness: 8
+                    shadow_offset: (0, 2)
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(24)
+                        spacing: dp(6)
+
+                        MDIcon:
+                            icon: "pencil-outline"
+                            theme_icon_color: "Custom"
+                            icon_color: (0, 0.59, 0.53, 1)
+                            size_hint_x: None
+                            width: dp(24)
+
+                        MDLabel:
+                            text: "Activity Name"
+                            font_style: "Title"
+                            role: "small"
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: (0.2, 0.2, 0.25, 1)
+
+                    # Activity field with suggestions
+                    ActivitySuggestionField:
+                        id: activity_field
+                        size_hint_y: None
+
+                # ========== DETAILS CARD ==========
+                MDCard:
+                    id: details_card
+                    orientation: "vertical"
+                    padding: dp(16)
+                    spacing: dp(12)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    style: "elevated"
+                    theme_bg_color: "Custom"
+                    md_bg_color: (1, 1, 1, 1)
+                    theme_shadow_color: "Custom"
+                    shadow_color: (0, 0, 0, 0.04)
+                    shadow_softness: 8
+                    shadow_offset: (0, 2)
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(24)
+                        spacing: dp(6)
+
+                        MDIcon:
+                            icon: "format-list-bulleted"
+                            theme_icon_color: "Custom"
+                            icon_color: (0, 0.59, 0.53, 1)
+                            size_hint_x: None
+                            width: dp(24)
+
+                        MDLabel:
+                            text: "Details"
+                            font_style: "Title"
+                            role: "small"
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: (0.2, 0.2, 0.25, 1)
+
+                        Widget:
+                            size_hint_x: 1
+
+                        MDIconButton:
+                            icon: "plus-circle-outline"
+                            theme_icon_color: "Custom"
+                            icon_color: (0, 0.59, 0.53, 1)
+                            on_release: root.add_custom_field()
+                            size_hint: (None, None)
+                            size: (dp(36), dp(36))
+
+                    # Dynamic Form Fields Container
+                    MDBoxLayout:
+                        id: form_container
+                        orientation: "vertical"
+                        adaptive_height: True
+                        spacing: dp(10)
+
+                    # Help text
+                    MDLabel:
+                        text: "Tap + to add custom fields"
+                        font_style: "Label"
+                        role: "small"
+                        theme_text_color: "Custom"
+                        text_color: (0.55, 0.55, 0.6, 1)
+                        adaptive_height: True
+
+                # ========== NOTES CARD ==========
+                MDCard:
+                    orientation: "vertical"
+                    padding: dp(16)
+                    spacing: dp(12)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    style: "elevated"
+                    theme_bg_color: "Custom"
+                    md_bg_color: (1, 1, 1, 1)
+                    theme_shadow_color: "Custom"
+                    shadow_color: (0, 0, 0, 0.04)
+                    shadow_softness: 8
+                    shadow_offset: (0, 2)
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(24)
+                        spacing: dp(6)
+
+                        MDIcon:
+                            icon: "note-text-outline"
+                            theme_icon_color: "Custom"
+                            icon_color: (0, 0.59, 0.53, 1)
+                            size_hint_x: None
+                            width: dp(24)
+
+                        MDLabel:
+                            text: "Notes"
+                            font_style: "Title"
+                            role: "small"
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: (0.2, 0.2, 0.25, 1)
+
+                    MDTextField:
+                        id: notes_field
+                        mode: "outlined"
+                        multiline: True
+                        size_hint_y: None
+                        height: dp(100)
+
+                        MDTextFieldHintText:
+                            text: "Add any additional notes..."
+
+                # Bottom spacer
+                Widget:
+                    size_hint_y: None
+                    height: dp(24)
+
+
+# ============================================================
+# SETTINGS SCREEN
+# ============================================================
+<SettingsScreen>:
+    name: "settings"
+    md_bg_color: (0.96, 0.97, 0.98, 1)
+
+    MDBoxLayout:
+        orientation: "vertical"
+
+        # ========== TOP APP BAR ==========
+        MDBoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: dp(56)
+            md_bg_color: (1, 1, 1, 1)
+            padding: [dp(4), 0, dp(12), 0]
+
+            canvas.before:
+                Color:
+                    rgba: 0, 0, 0, 0.06
+                Rectangle:
+                    pos: self.x, self.y - dp(1)
+                    size: self.width, dp(1)
+
+            MDIconButton:
+                icon: "arrow-left"
+                theme_icon_color: "Custom"
+                icon_color: (0.2, 0.2, 0.25, 1)
+                on_release: app.go_back()
+                pos_hint: {"center_y": 0.5}
+
+            MDLabel:
+                text: "Settings"
+                font_style: "Title"
+                role: "medium"
+                bold: True
+                theme_text_color: "Custom"
+                text_color: (0.2, 0.2, 0.25, 1)
+                pos_hint: {"center_y": 0.5}
+
+        MDScrollView:
+            do_scroll_x: False
+
+            MDBoxLayout:
+                orientation: "vertical"
+                padding: dp(16)
+                spacing: dp(12)
+                adaptive_height: True
+
+                # Theme Settings Card
+                MDCard:
+                    orientation: "vertical"
+                    padding: dp(16)
+                    spacing: dp(12)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    style: "elevated"
+                    theme_bg_color: "Custom"
+                    md_bg_color: (1, 1, 1, 1)
+                    theme_shadow_color: "Custom"
+                    shadow_color: (0, 0, 0, 0.04)
+                    shadow_softness: 8
+                    shadow_offset: (0, 2)
+
+                    MDLabel:
+                        text: "Appearance"
+                        font_style: "Title"
+                        role: "small"
+                        bold: True
+                        theme_text_color: "Custom"
+                        text_color: (0.2, 0.2, 0.25, 1)
+                        adaptive_height: True
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(48)
+                        spacing: dp(10)
+
+                        MDIcon:
+                            icon: "theme-light-dark"
+                            theme_icon_color: "Custom"
+                            icon_color: (0, 0.59, 0.53, 1)
+                            pos_hint: {"center_y": 0.5}
+                            size_hint_x: None
+                            width: dp(24)
+
+                        MDLabel:
+                            text: "Dark Mode"
+                            theme_text_color: "Custom"
+                            text_color: (0.3, 0.3, 0.35, 1)
+                            pos_hint: {"center_y": 0.5}
+
+                        Widget:
+                            size_hint_x: 1
+
+                        MDSwitch:
+                            id: dark_mode_switch
+                            pos_hint: {"center_y": 0.5}
+                            on_active: app.toggle_theme(self.active)
+
+                    # View Mode option
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(48)
+                        spacing: dp(10)
+                        on_touch_down: if self.collide_point(*args[1].pos): root.open_view_mode_dialog()
+
+                        MDIcon:
+                            icon: "view-dashboard-outline"
+                            theme_icon_color: "Custom"
+                            icon_color: (0, 0.59, 0.53, 1)
+                            pos_hint: {"center_y": 0.5}
+                            size_hint_x: None
+                            width: dp(24)
+
+                        MDLabel:
+                            text: "View Mode"
+                            theme_text_color: "Custom"
+                            text_color: (0.3, 0.3, 0.35, 1)
+                            pos_hint: {"center_y": 0.5}
+
+                        Widget:
+                            size_hint_x: 1
+
+                        MDIcon:
+                            icon: "chevron-right"
+                            theme_icon_color: "Custom"
+                            icon_color: (0.5, 0.5, 0.55, 1)
+                            pos_hint: {"center_y": 0.5}
+                            size_hint_x: None
+                            width: dp(24)
+
+                # Categories Management Card
+                MDCard:
+                    orientation: "vertical"
+                    padding: dp(16)
+                    spacing: dp(12)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    style: "elevated"
+                    theme_bg_color: "Custom"
+                    md_bg_color: (1, 1, 1, 1)
+                    theme_shadow_color: "Custom"
+                    shadow_color: (0, 0, 0, 0.04)
+                    shadow_softness: 8
+                    shadow_offset: (0, 2)
+                    on_touch_down: if self.collide_point(*args[1].pos): root.open_categories_dialog()
+
+                    MDLabel:
+                        text: "Categories"
+                        font_style: "Title"
+                        role: "small"
+                        bold: True
+                        theme_text_color: "Custom"
+                        text_color: (0.2, 0.2, 0.25, 1)
+                        adaptive_height: True
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(48)
+                        spacing: dp(10)
+
+                        MDIcon:
+                            icon: "folder-plus-outline"
+                            theme_icon_color: "Custom"
+                            icon_color: (0, 0.59, 0.53, 1)
+                            pos_hint: {"center_y": 0.5}
+                            size_hint_x: None
+                            width: dp(24)
+
+                        MDLabel:
+                            text: "Manage Categories"
+                            theme_text_color: "Custom"
+                            text_color: (0.3, 0.3, 0.35, 1)
+                            pos_hint: {"center_y": 0.5}
+
+                        Widget:
+                            size_hint_x: 1
+
+                        MDIcon:
+                            icon: "chevron-right"
+                            theme_icon_color: "Custom"
+                            icon_color: (0.5, 0.5, 0.55, 1)
+                            pos_hint: {"center_y": 0.5}
+                            size_hint_x: None
+                            width: dp(24)
+
+                # About Card
+                MDCard:
+                    orientation: "vertical"
+                    padding: dp(16)
+                    spacing: dp(8)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    style: "elevated"
+                    theme_bg_color: "Custom"
+                    md_bg_color: (1, 1, 1, 1)
+                    theme_shadow_color: "Custom"
+                    shadow_color: (0, 0, 0, 0.04)
+                    shadow_softness: 8
+                    shadow_offset: (0, 2)
+
+                    MDLabel:
+                        text: "About"
+                        font_style: "Title"
+                        role: "small"
+                        bold: True
+                        theme_text_color: "Custom"
+                        text_color: (0.2, 0.2, 0.25, 1)
+                        adaptive_height: True
+
+                    MDLabel:
+                        text: "HealthLogOps v0.1.0"
+                        theme_text_color: "Custom"
+                        text_color: (0.5, 0.5, 0.55, 1)
+                        adaptive_height: True
+
+                    MDLabel:
+                        text: "Your personal health activity tracker"
+                        theme_text_color: "Custom"
+                        text_color: (0.5, 0.5, 0.55, 1)
+                        adaptive_height: True
+
+                # Spacer
+                Widget:
+                    size_hint_y: None
+                    height: dp(24)
+
+
+# ============================================================
+# LOG CARD WIDGET
+# ============================================================
+<LogCard>:
+    orientation: "horizontal"
+    size_hint_y: None
+    height: dp(80)
+
+
+# ============================================================
+# EDIT LOG SCREEN
+# ============================================================
+<EditLogScreen>:
+    name: "edit_log"
+    category_label: category_label
+    activity_field: activity_field
+    notes_field: notes_field
+    form_container: form_container
+    md_bg_color: (0.96, 0.97, 0.98, 1)
+
+    MDBoxLayout:
+        orientation: "vertical"
+
+        # ========== TOP APP BAR ==========
+        MDBoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: dp(56)
+            md_bg_color: (1, 1, 1, 1)
+            padding: [dp(4), 0, dp(12), 0]
+
+            canvas.before:
+                Color:
+                    rgba: 0, 0, 0, 0.06
+                Rectangle:
+                    pos: self.x, self.y - dp(1)
+                    size: self.width, dp(1)
+
+            MDIconButton:
+                icon: "arrow-left"
+                theme_icon_color: "Custom"
+                icon_color: (0.2, 0.2, 0.25, 1)
+                on_release: app.go_back()
+                pos_hint: {"center_y": 0.5}
+
+            MDLabel:
+                text: "Edit Log"
+                font_style: "Title"
+                role: "large"
+                bold: True
+                theme_text_color: "Custom"
+                text_color: (0.2, 0.2, 0.25, 1)
+                pos_hint: {"center_y": 0.45}
+
+            Widget:
+                size_hint_x: 1
+
+            MDIconButton:
+                icon: "delete-outline"
+                theme_icon_color: "Custom"
+                icon_color: (0.91, 0.30, 0.24, 1)
+                on_release: root.confirm_delete()
+                pos_hint: {"center_y": 0.5}
+
+            MDButton:
+                style: "filled"
+                theme_bg_color: "Custom"
+                md_bg_color: (0, 0.59, 0.53, 1)
+                on_release: root.save_log(); app.go_back()
+                pos_hint: {"center_y": 0.5}
+                size_hint_x: None
+                width: dp(80)
+
+                MDButtonText:
+                    text: "SAVE"
+                    theme_text_color: "Custom"
+                    text_color: (1, 1, 1, 1)
+
+        MDScrollView:
+            do_scroll_x: False
+
+            MDBoxLayout:
+                orientation: "vertical"
+                padding: dp(16)
+                spacing: dp(16)
+                adaptive_height: True
+
+                # ========== CATEGORY CARD (READ-ONLY) ==========
+                MDCard:
+                    orientation: "vertical"
+                    padding: dp(16)
+                    spacing: dp(12)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    style: "elevated"
+                    theme_bg_color: "Custom"
+                    md_bg_color: (1, 1, 1, 1)
+                    theme_shadow_color: "Custom"
+                    shadow_color: (0, 0, 0, 0.04)
+                    shadow_softness: 8
+                    shadow_offset: (0, 2)
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(24)
+                        spacing: dp(6)
+
+                        MDIcon:
+                            icon: "shape-outline"
+                            theme_icon_color: "Custom"
+                            icon_color: (0, 0.59, 0.53, 1)
+                            size_hint_x: None
+                            width: dp(24)
+
+                        MDLabel:
+                            text: "Category"
+                            font_style: "Title"
+                            role: "small"
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: (0.2, 0.2, 0.25, 1)
+
+                    MDLabel:
+                        id: category_label
+                        text: ""
+                        theme_text_color: "Custom"
+                        text_color: (0.4, 0.4, 0.45, 1)
+                        font_style: "Body"
+                        role: "large"
+                        size_hint_y: None
+                        height: dp(28)
+
+                # ========== ACTIVITY NAME CARD ==========
+                MDCard:
+                    orientation: "vertical"
+                    padding: dp(16)
+                    spacing: dp(12)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    style: "elevated"
+                    theme_bg_color: "Custom"
+                    md_bg_color: (1, 1, 1, 1)
+                    theme_shadow_color: "Custom"
+                    shadow_color: (0, 0, 0, 0.04)
+                    shadow_softness: 8
+                    shadow_offset: (0, 2)
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(24)
+                        spacing: dp(6)
+
+                        MDIcon:
+                            icon: "pencil-outline"
+                            theme_icon_color: "Custom"
+                            icon_color: (0, 0.59, 0.53, 1)
+                            size_hint_x: None
+                            width: dp(24)
+
+                        MDLabel:
+                            text: "Activity Name"
+                            font_style: "Title"
+                            role: "small"
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: (0.2, 0.2, 0.25, 1)
+
+                    MDTextField:
+                        id: activity_field
+                        mode: "outlined"
+                        size_hint_y: None
+                        height: dp(56)
+
+                        MDTextFieldHintText:
+                            text: "Enter activity name"
+
+                # ========== DETAILS CARD ==========
+                MDCard:
+                    id: details_card
+                    orientation: "vertical"
+                    padding: dp(16)
+                    spacing: dp(12)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    style: "elevated"
+                    theme_bg_color: "Custom"
+                    md_bg_color: (1, 1, 1, 1)
+                    theme_shadow_color: "Custom"
+                    shadow_color: (0, 0, 0, 0.04)
+                    shadow_softness: 8
+                    shadow_offset: (0, 2)
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(24)
+                        spacing: dp(6)
+
+                        MDIcon:
+                            icon: "format-list-bulleted"
+                            theme_icon_color: "Custom"
+                            icon_color: (0, 0.59, 0.53, 1)
+                            size_hint_x: None
+                            width: dp(24)
+
+                        MDLabel:
+                            text: "Details"
+                            font_style: "Title"
+                            role: "small"
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: (0.2, 0.2, 0.25, 1)
+
+                    # Dynamic Form Fields Container
+                    MDBoxLayout:
+                        id: form_container
+                        orientation: "vertical"
+                        adaptive_height: True
+                        spacing: dp(10)
+
+                # ========== NOTES CARD ==========
+                MDCard:
+                    orientation: "vertical"
+                    padding: dp(16)
+                    spacing: dp(12)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    style: "elevated"
+                    theme_bg_color: "Custom"
+                    md_bg_color: (1, 1, 1, 1)
+                    theme_shadow_color: "Custom"
+                    shadow_color: (0, 0, 0, 0.04)
+                    shadow_softness: 8
+                    shadow_offset: (0, 2)
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(24)
+                        spacing: dp(6)
+
+                        MDIcon:
+                            icon: "note-text-outline"
+                            theme_icon_color: "Custom"
+                            icon_color: (0, 0.59, 0.53, 1)
+                            size_hint_x: None
+                            width: dp(24)
+
+                        MDLabel:
+                            text: "Notes"
+                            font_style: "Title"
+                            role: "small"
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: (0.2, 0.2, 0.25, 1)
+
+                    MDTextField:
+                        id: notes_field
+                        mode: "outlined"
+                        multiline: True
+                        size_hint_y: None
+                        height: dp(100)
+
+                        MDTextFieldHintText:
+                            text: "Add any additional notes..."
+
+                # Bottom spacer
+                Widget:
+                    size_hint_y: None
+                    height: dp(24)
