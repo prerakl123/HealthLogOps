@@ -759,11 +759,11 @@
 
                 # ========== CATEGORY CARD (READ-ONLY) ==========
                 MDCard:
-                    orientation: "vertical"
+                    orientation: "horizontal"
                     padding: dp(16)
                     spacing: dp(12)
                     size_hint_y: None
-                    height: self.minimum_height
+                    height: dp(56)
                     style: "elevated"
                     theme_bg_color: "Custom"
                     md_bg_color: (1, 1, 1, 1)
@@ -772,26 +772,24 @@
                     shadow_softness: 8
                     shadow_offset: (0, 2)
 
-                    MDBoxLayout:
-                        orientation: "horizontal"
-                        size_hint_y: None
-                        height: dp(24)
-                        spacing: dp(6)
+                    MDIcon:
+                        icon: "shape-outline"
+                        theme_icon_color: "Custom"
+                        icon_color: (0, 0.59, 0.53, 1)
+                        size_hint_x: None
+                        width: dp(24)
+                        pos_hint: {"center_y": 0.5}
 
-                        MDIcon:
-                            icon: "shape-outline"
-                            theme_icon_color: "Custom"
-                            icon_color: (0, 0.59, 0.53, 1)
-                            size_hint_x: None
-                            width: dp(24)
-
-                        MDLabel:
-                            text: "Category"
-                            font_style: "Title"
-                            role: "small"
-                            bold: True
-                            theme_text_color: "Custom"
-                            text_color: (0.2, 0.2, 0.25, 1)
+                    MDLabel:
+                        text: "Category"
+                        font_style: "Title"
+                        role: "medium"
+                        bold: True
+                        theme_text_color: "Custom"
+                        text_color: (0.2, 0.2, 0.25, 1)
+                        size_hint_x: None
+                        width: dp(80)
+                        pos_hint: {"center_y": 0.4}
 
                     MDLabel:
                         id: category_label
@@ -800,8 +798,9 @@
                         text_color: (0.4, 0.4, 0.45, 1)
                         font_style: "Body"
                         role: "large"
-                        size_hint_y: None
-                        height: dp(28)
+                        pos_hint: {"center_y": 0.4}
+                        halign: "right"
+                        padding: [0, 0, dp(4), 0]
 
                 # ========== ACTIVITY NAME CARD ==========
                 MDCard:
@@ -834,10 +833,11 @@
                         MDLabel:
                             text: "Activity Name"
                             font_style: "Title"
-                            role: "small"
+                            role: "medium"
                             bold: True
                             theme_text_color: "Custom"
                             text_color: (0.2, 0.2, 0.25, 1)
+                            pos_hint: {"center_y": 0.4}
 
                     MDTextField:
                         id: activity_field
@@ -880,10 +880,22 @@
                         MDLabel:
                             text: "Details"
                             font_style: "Title"
-                            role: "small"
+                            role: "medium"
                             bold: True
                             theme_text_color: "Custom"
                             text_color: (0.2, 0.2, 0.25, 1)
+                            pos_hint: {"center_y": 0.4}
+
+                        Widget:
+                            size_hint_x: 1
+
+                        MDIconButton:
+                            icon: "plus-circle-outline"
+                            theme_icon_color: "Custom"
+                            icon_color: (0, 0.59, 0.53, 1)
+                            on_release: root.add_custom_field()
+                            size_hint: (None, None)
+                            size: (dp(36), dp(36))
 
                     # Dynamic Form Fields Container
                     MDBoxLayout:
@@ -891,6 +903,15 @@
                         orientation: "vertical"
                         adaptive_height: True
                         spacing: dp(10)
+
+                    # Help text
+                    MDLabel:
+                        text: "Tap + to add custom fields"
+                        font_style: "Label"
+                        role: "small"
+                        theme_text_color: "Custom"
+                        text_color: (0.55, 0.55, 0.6, 1)
+                        adaptive_height: True
 
                 # ========== NOTES CARD ==========
                 MDCard:
@@ -923,10 +944,11 @@
                         MDLabel:
                             text: "Notes"
                             font_style: "Title"
-                            role: "small"
+                            role: "medium"
                             bold: True
                             theme_text_color: "Custom"
                             text_color: (0.2, 0.2, 0.25, 1)
+                            pos_hint: {"center_y": 0.4}
 
                     MDTextField:
                         id: notes_field

@@ -33,18 +33,19 @@ class KeyValueField(MDBoxLayout):
 
     Displays a field name in a colored label container on the left
     and a text input on the right. Optionally includes a remove button
-    for custom fields.
+    for custom fields. Custom fields also have an editable key name.
 
     Attributes:
         field_name: The display name for this field.
         field_type: The data type of this field (int, float, str, text).
+        key_field: The editable key name text field (only for custom fields).
 
     Args:
         field_name: The name to display for this field.
         field_type: The data type hint (int, float, str, text).
         hint_text: Placeholder text for the input field.
         input_filter: Kivy input filter ('int', 'float', or None).
-        removable: Whether to show a remove button.
+        removable: Whether to show a remove button (also enables editable key).
         **kwargs: Additional keyword arguments passed to MDBoxLayout.
 
     Example:
@@ -78,7 +79,7 @@ class KeyValueField(MDBoxLayout):
         :param field_type: The data type hint (int, float, str, text).
         :param hint_text: Placeholder text for the input field.
         :param input_filter: Kivy input filter ('int', 'float', or None).
-        :param removable: Whether to show a remove button.
+        :param removable: Whether to show a remove button (also enables editable key).
         :param kwargs: Additional keyword arguments passed to MDBoxLayout.
         """
         super().__init__(**kwargs)
@@ -89,7 +90,22 @@ class KeyValueField(MDBoxLayout):
         self.spacing = dp(12)
         self.size_hint_y = None
         self.height = dp(56)
+        self.key_field = None  # Will be set for custom fields
 
+        if removable:
+            # Custom field with editable key name
+            self._build_editable_key_field(field_name, hint_text)
+        else:
+            # Standard field with fixed key label
+            self._build_fixed_key_field(field_name, hint_text, input_filter)
+
+    def _build_fixed_key_field(
+        self,
+        field_name: str,
+        hint_text: str,
+        input_filter: Optional[str]
+    ) -> None:
+        """Build a field with a fixed (non-editable) key label."""
         # Key label container
         key_container = MDBoxLayout(
             size_hint_x=0.4,
@@ -124,23 +140,45 @@ class KeyValueField(MDBoxLayout):
         # Value input field
         self.value_field = MDTextField(
             mode="outlined",
-            size_hint_x=0.5 if removable else 0.6,
+            size_hint_x=0.6,
         )
         self.value_field.hint_text = hint_text
         if input_filter:
             self.value_field.input_filter = input_filter
         self.add_widget(self.value_field)
 
+    def _build_editable_key_field(
+        self,
+        field_name: str,
+        hint_text: str
+    ) -> None:
+        """Build a custom field with editable key name and no input filter restriction."""
+        # Editable key name text field
+        self.key_field = MDTextField(
+            mode="outlined",
+            size_hint_x=0.35,
+        )
+        self.key_field.hint_text = "Field name"
+        self.key_field.text = field_name
+        self.add_widget(self.key_field)
+
+        # Value input field (no input filter for custom fields - allow any value)
+        self.value_field = MDTextField(
+            mode="outlined",
+            size_hint_x=0.45,
+        )
+        self.value_field.hint_text = hint_text
+        self.add_widget(self.value_field)
+
         # Remove button
-        if removable:
-            remove_btn = MDIconButton(
-                icon="close-circle",
-                theme_icon_color="Custom",
-                icon_color=(0.8, 0.3, 0.3, 0.8),
-                pos_hint={"center_y": 0.5},
-                on_release=lambda x: self._remove_self()
-            )
-            self.add_widget(remove_btn)
+        remove_btn = MDIconButton(
+            icon="close-circle",
+            theme_icon_color="Custom",
+            icon_color=(0.8, 0.3, 0.3, 0.8),
+            pos_hint={"center_y": 0.5},
+            on_release=lambda x: self._remove_self()
+        )
+        self.add_widget(remove_btn)
 
     def _update_key_rect(self, instance, value) -> None:
         """
@@ -279,16 +317,18 @@ class DynamicFormBuilder:
         :param field_name: The name to display for this field.
         :param field_type: The data type (int, float, str, text).
         :param on_change_callback: Optional callback for value changes.
-        :param removable: Whether to include a remove button.
+        :param removable: Whether to include a remove button (custom field).
         :returns: A configured KeyValueField widget.
         """
         config = cls.TYPE_CONFIG.get(field_type.lower(), cls.TYPE_CONFIG["str"])
         display_name = field_name.replace("_", " ").title()
+
+        # Custom fields (removable=True) don't use input_filter to allow any value type
         field_widget = KeyValueField(
             field_name=display_name,
             field_type=field_type,
-            hint_text=config["hint_text"],
-            input_filter=config["input_filter"],
+            hint_text="Enter value" if removable else config["hint_text"],
+            input_filter=None if removable else config["input_filter"],
             removable=removable
         )
         if on_change_callback:

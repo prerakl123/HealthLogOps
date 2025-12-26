@@ -226,12 +226,22 @@ class AddLogScreen(MDScreen):
         # Add custom field values
         for custom_field in self.custom_fields:
             if custom_field.parent:  # Only if not removed
-                field_name = custom_field.field_name.lower().replace(" ", "_")
+                # Get the field name from the editable key field
+                if hasattr(custom_field, 'key_field') and custom_field.key_field:
+                    field_name = custom_field.key_field.text.strip().lower().replace(" ", "_")
+                else:
+                    field_name = custom_field.field_name.lower().replace(" ", "_")
+                if not field_name:
+                    field_name = "custom"
+                raw_value = custom_field.get_value()
+                # Try to convert to number if possible
                 try:
-                    raw_value = custom_field.get_value()
-                    metrics[field_name] = float(raw_value) if raw_value else 0.0
-                except ValueError:
-                    metrics[field_name] = custom_field.get_value()
+                    if '.' in raw_value:
+                        metrics[field_name] = float(raw_value)
+                    else:
+                        metrics[field_name] = int(raw_value)
+                except (ValueError, TypeError):
+                    metrics[field_name] = raw_value
 
         # Get notes
         notes = self.notes_field.text.strip() if self.notes_field else None

@@ -39,8 +39,17 @@ if str(src_dir) not in sys.path:
 
 from kivy.lang import Builder
 from kivy.core.window import Window
+from kivy.metrics import dp
 from kivy.uix.screenmanager import ScreenManager, SlideTransition
 from kivymd.app import MDApp
+from kivymd.uix.dialog import (
+    MDDialog,
+    MDDialogHeadlineText,
+    MDDialogSupportingText,
+    MDDialogButtonContainer,
+)
+from kivymd.uix.button import MDButton, MDButtonText
+from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
 
 from database import DatabaseManager
 from ui.screens import HomeScreen, AddLogScreen, EditLogScreen, SettingsScreen
@@ -79,6 +88,8 @@ class HealthLogOpsApp(MDApp):
         super().__init__(**kwargs)
         self.db_manager: Optional[DatabaseManager] = None
         self.screen_manager: Optional[ScreenManager] = None
+        self._delete_dialog: Optional[MDDialog] = None
+        self._pending_delete_log_id: Optional[int] = None
 
     def build(self) -> ScreenManager:
         """
@@ -204,6 +215,71 @@ class HealthLogOpsApp(MDApp):
         if self.screen_manager:
             self.screen_manager.transition.direction = "left"
             self.screen_manager.current = "settings"
+
+    def confirm_delete_log(self, log_id: int) -> None:
+        """
+        Show confirmation dialog before deleting a log.
+
+        :param log_id: The ID of the log to delete.
+        """
+        self._pending_delete_log_id = log_id
+        self._delete_dialog = MDDialog(
+            MDDialogHeadlineText(text="Delete Log?"),
+            MDDialogSupportingText(
+                text="This action cannot be undone. Are you sure you want to delete this log entry?"
+            ),
+            MDDialogButtonContainer(
+                MDButton(
+                    MDButtonText(text="Cancel"),
+                    style="text",
+                    on_release=lambda x: self._delete_dialog.dismiss()
+                ),
+                MDButton(
+                    MDButtonText(
+                        text="Delete",
+                        theme_text_color="Custom",
+                        text_color=(0.91, 0.30, 0.24, 1),
+                    ),
+                    style="text",
+                    on_release=lambda x: self._do_delete_log()
+                ),
+                spacing="8dp",
+                padding=(dp(84), dp(0), dp(0), dp(0)),
+            ),
+        )
+        self._delete_dialog.open()
+
+    def _do_delete_log(self) -> None:
+        """Actually delete the log after confirmation."""
+        if self._delete_dialog:
+            self._delete_dialog.dismiss()
+            self._delete_dialog = None
+
+        if not self.db_manager or not self._pending_delete_log_id:
+            return
+
+        try:
+            if self.db_manager.delete_log(self._pending_delete_log_id):
+                MDSnackbar(
+                    MDSnackbarText(text="Log deleted"),
+                    y=dp(24),
+                    pos_hint={"center_x": 0.5},
+                    size_hint_x=0.9,
+                ).open()
+                # Refresh home screen
+                home = self.screen_manager.get_screen("home")
+                if home:
+                    home.refresh_logs()
+        except Exception as e:
+            print(f"Error deleting log: {e}")
+            MDSnackbar(
+                MDSnackbarText(text="Failed to delete log"),
+                y=dp(24),
+                pos_hint={"center_x": 0.5},
+                size_hint_x=0.9,
+            ).open()
+        finally:
+            self._pending_delete_log_id = None
 
     # ========== THEME METHODS ==========
 

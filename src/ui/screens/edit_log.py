@@ -74,9 +74,11 @@ class EditLogScreen(MDScreen):
         super().__init__(**kwargs)
         self.db_manager: Optional[DatabaseManager] = None
         self.current_fields: dict[str, KeyValueField] = {}
+        self.custom_fields: list[KeyValueField] = []
         self.current_template: dict[str, str] = {}
         self.log_data: Optional[dict[str, Any]] = None
         self._delete_dialog: Optional[MDDialog] = None
+        self._custom_field_counter: int = 0
 
     def load_log(self, log_id: int) -> None:
         """
@@ -89,6 +91,8 @@ class EditLogScreen(MDScreen):
 
         self.log_id = log_id
         self.log_data = self.db_manager.get_log(log_id)
+        self.custom_fields.clear()
+        self._custom_field_counter = 0
 
         if not self.log_data:
             return
@@ -122,6 +126,48 @@ class EditLogScreen(MDScreen):
                 initial_values=existing_metrics
             )
 
+            # Load custom fields (metrics not in template)
+            for key, value in existing_metrics.items():
+                if key not in self.current_template:
+                    self._custom_field_counter += 1
+                    custom_field = DynamicFormBuilder.create_custom_field(
+                        container=self.form_container,
+                        field_name=key.replace("_", " ").title(),
+                        field_type="str"
+                    )
+                    custom_field.value_field.text = str(value)
+                    # Store the original key for later extraction
+                    custom_field._original_key = key
+                    self.custom_fields.append(custom_field)
+
+    def add_custom_field(self) -> None:
+        """
+        Add a custom field to the form.
+
+        Creates a new removable field with a default name and
+        string type. Shows a snackbar confirmation to the user.
+        """
+        if not self.form_container:
+            return
+
+        self._custom_field_counter += 1
+        field_name = f"Custom {self._custom_field_counter}"
+
+        custom_field = DynamicFormBuilder.create_custom_field(
+            container=self.form_container,
+            field_name=field_name,
+            field_type="str"
+        )
+        self.custom_fields.append(custom_field)
+
+        # Show feedback
+        MDSnackbar(
+            MDSnackbarText(text=f"Added custom field: {field_name}"),
+            y=dp(24),
+            pos_hint={"center_x": 0.5},
+            size_hint_x=0.9,
+        ).open()
+
     def save_log(self) -> bool:
         """
         Save the edited log entry.
@@ -143,6 +189,26 @@ class EditLogScreen(MDScreen):
             fields=self.current_fields,
             template=self.current_template
         )
+
+        # Add custom field values
+        for custom_field in self.custom_fields:
+            if custom_field.parent:  # Only if not removed
+                # Get the field name from the editable key field or fall back to field_name
+                if hasattr(custom_field, 'key_field') and custom_field.key_field:
+                    field_name = custom_field.key_field.text.strip().lower().replace(" ", "_")
+                else:
+                    field_name = custom_field.field_name.lower().replace(" ", "_")
+                if not field_name:
+                    field_name = "custom"
+                raw_value = custom_field.get_value()
+                # Try to convert to number if possible
+                try:
+                    if '.' in raw_value:
+                        metrics[field_name] = float(raw_value)
+                    else:
+                        metrics[field_name] = int(raw_value)
+                except (ValueError, TypeError):
+                    metrics[field_name] = raw_value
 
         # Get notes
         notes = self.notes_field.text.strip() if self.notes_field else None

@@ -10,14 +10,12 @@ Classes:
     NoActivityLabel: Label shown when no activities exist for a date.
 """
 
-from datetime import date, datetime
+from datetime import date, timedelta
 from typing import Any, Callable, Optional
 
-from kivy.animation import Animation
 from kivy.graphics import Color, RoundedRectangle
 from kivy.metrics import dp
 from kivy.properties import BooleanProperty, StringProperty
-from kivy.uix.behaviors import ButtonBehavior
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.label import MDIcon, MDLabel
 
@@ -35,7 +33,6 @@ def format_date_header(log_date: date) -> str:
         return "Today"
     elif log_date == today.replace(day=today.day - 1) if today.day > 1 else today:
         # Handle yesterday more carefully
-        from datetime import timedelta
         yesterday = today - timedelta(days=1)
         if log_date == yesterday:
             return "Yesterday"
@@ -44,7 +41,7 @@ def format_date_header(log_date: date) -> str:
     return log_date.strftime("%b %d, %Y")
 
 
-class DateGroupHeader(ButtonBehavior, MDBoxLayout):
+class DateGroupHeader(MDBoxLayout):
     """
     A collapsible header for a date group of log entries.
 
@@ -162,13 +159,16 @@ class DateGroupHeader(ButtonBehavior, MDBoxLayout):
         self._bg.pos = self.pos
         self._bg.size = self.size
 
-    def on_release(self) -> None:
-        """Handle tap to toggle expanded state."""
-        self.is_expanded = not self.is_expanded
-        self.chevron.icon = "chevron-down" if self.is_expanded else "chevron-right"
+    def on_touch_down(self, touch) -> bool:
+        """Handle touch to toggle expanded state."""
+        if self.collide_point(*touch.pos):
+            self.is_expanded = not self.is_expanded
+            self.chevron.icon = "chevron-down" if self.is_expanded else "chevron-right"
 
-        if self.on_toggle_callback:
-            self.on_toggle_callback(self.is_expanded)
+            if self.on_toggle_callback:
+                self.on_toggle_callback(self.is_expanded)
+            return True
+        return super().on_touch_down(touch)
 
 
 class NoActivityLabel(MDBoxLayout):

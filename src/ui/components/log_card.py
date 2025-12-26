@@ -27,7 +27,9 @@ from kivy.metrics import dp
 from kivy.properties import NumericProperty
 from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.button import MDIconButton
 from kivymd.uix.label import MDIcon, MDLabel
+from kivymd.uix.menu import MDDropdownMenu
 
 from ui.constants import (
     CATEGORY_COLORS,
@@ -298,6 +300,7 @@ class LogCard(MDBoxLayout):
         self.view_mode = view_mode
         self._metrics_row = None
         self._all_metrics = list(log_data.get("metrics", {}).items())
+        self._menu = None  # Context menu reference
 
         # Card styling
         self.orientation = "horizontal"
@@ -363,8 +366,6 @@ class LogCard(MDBoxLayout):
         # Schedule metrics layout after widget is ready
         Clock.schedule_once(self._update_metrics_display, 0)
 
-        # Make card tappable
-        self.bind(on_touch_down=self._on_card_touch)
 
     def _update_canvas(self, *args) -> None:
         """Update the card background graphics when position or size changes."""
@@ -437,7 +438,7 @@ class LogCard(MDBoxLayout):
             padding=[0, dp(4), 0, dp(4)]
         )
 
-        # Top row: Activity name + Time
+        # Top row: Activity name + Time + Menu
         top_row = MDBoxLayout(
             orientation="horizontal",
             size_hint_y=None,
@@ -470,11 +471,24 @@ class LogCard(MDBoxLayout):
             theme_text_color="Custom",
             text_color=text_secondary,
             size_hint_x=None,
-            width=dp(65),
+            width=dp(55),
             halign="right",
             valign="center"
         )
         top_row.add_widget(time_label)
+
+        # Triple-dot menu button
+        menu_button = MDIconButton(
+            icon="dots-vertical",
+            theme_icon_color="Custom",
+            icon_color=text_secondary,
+            size_hint=(None, None),
+            size=(dp(24), dp(24)),
+            pos_hint={"center_y": 0.5},
+            on_release=lambda x: self._show_context_menu(x)
+        )
+        top_row.add_widget(menu_button)
+
         text_container.add_widget(top_row)
 
         # Metrics row - will be populated dynamically (hide in compact mode)
@@ -574,16 +588,52 @@ class LogCard(MDBoxLayout):
         # Add flexible spacer
         self._metrics_row.add_widget(MDBoxLayout(size_hint_x=1))
 
-    def _on_card_touch(self, instance, touch) -> bool:
-        """Handle touch event on the card."""
-        if self.collide_point(*touch.pos):
-            log_id = self.log_data.get("id")
-            if log_id:
-                app = MDApp.get_running_app()
-                if app and hasattr(app, 'switch_to_edit_log'):
-                    app.switch_to_edit_log(log_id)
-                    return True
-            if self.on_tap_callback:
-                self.on_tap_callback(log_id)
-                return True
-        return False
+    def _show_context_menu(self, button) -> None:
+        """Show context menu with edit and delete options."""
+        if self._menu:
+            self._menu.dismiss()
+            self._menu = None
+
+        menu_items = [
+            {
+                "text": "Edit",
+                "leading_icon": "pencil-outline",
+                "on_release": lambda: self._on_menu_edit(),
+            },
+            {
+                "text": "Delete",
+                "leading_icon": "delete-outline",
+                "on_release": lambda: self._on_menu_delete(),
+            },
+        ]
+
+        self._menu = MDDropdownMenu(
+            caller=button,
+            items=menu_items,
+            width_mult=3,
+        )
+        self._menu.open()
+
+    def _on_menu_edit(self) -> None:
+        """Handle edit action from context menu."""
+        if self._menu:
+            self._menu.dismiss()
+            self._menu = None
+
+        log_id = self.log_data.get("id")
+        if log_id:
+            app = MDApp.get_running_app()
+            if app and hasattr(app, 'switch_to_edit_log'):
+                app.switch_to_edit_log(log_id)
+
+    def _on_menu_delete(self) -> None:
+        """Handle delete action from context menu."""
+        if self._menu:
+            self._menu.dismiss()
+            self._menu = None
+
+        log_id = self.log_data.get("id")
+        if log_id:
+            app = MDApp.get_running_app()
+            if app and hasattr(app, 'confirm_delete_log'):
+                app.confirm_delete_log(log_id)
