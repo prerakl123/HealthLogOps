@@ -284,8 +284,8 @@ class DateGroup(MDBoxLayout):
             self.cards_container.opacity = 0
 
     def _populate_cards(self) -> None:
-        """Populate the cards container with log cards."""
-        from ui.components.log_card import LogCard
+        """Populate the cards container with swipeable log cards."""
+        from ui.components.log_card import SwipeableLogCard
 
         self.cards_container.clear_widgets()
 
@@ -293,7 +293,7 @@ class DateGroup(MDBoxLayout):
             self.cards_container.add_widget(NoActivityLabel())
         else:
             for log in self.logs:
-                card = LogCard(log_data=log, view_mode=self.view_mode)
+                card = SwipeableLogCard(log_data=log, view_mode=self.view_mode)
                 self.cards_container.add_widget(card)
 
     def _on_toggle(self, is_expanded: bool) -> None:

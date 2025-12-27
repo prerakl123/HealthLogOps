@@ -28,6 +28,7 @@ from ui.components import (
     EmptyStateWidget,
     MetricPill,
     OverflowPill,
+    SwipeableLogCard,
     StyledDropdown,
     DropdownItem,
     ActivitySuggestionField,
@@ -69,6 +70,7 @@ __all__ = [
     "LogCard",
     "MetricPill",
     "OverflowPill",
+    "SwipeableLogCard",
 
     # Components - Empty State
     "EmptyStateWidget",

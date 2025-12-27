@@ -360,6 +360,11 @@ class StyledDropdown(MDBoxLayout):
         # Change chevron icon
         self.chevron.icon = "chevron-up"
 
+        # Remove any existing dropdown container first
+        if self.dropdown_container and self.dropdown_container.parent:
+            self.remove_widget(self.dropdown_container)
+            self.dropdown_container = None
+
         # Create dropdown container
         self.dropdown_container = MDBoxLayout(
             orientation="vertical",

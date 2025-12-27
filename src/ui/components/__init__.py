@@ -17,7 +17,7 @@ KivyMD framework for consistent styling across the application.
 from ui.components.dropdown import StyledDropdown, DropdownItem
 from ui.components.suggestion_field import ActivitySuggestionField, SuggestionItem
 from ui.components.form_builder import DynamicFormBuilder, KeyValueField
-from ui.components.log_card import LogCard, MetricPill, OverflowPill
+from ui.components.log_card import LogCard, MetricPill, OverflowPill, SwipeableLogCard
 from ui.components.empty_state import EmptyStateWidget
 from ui.components.date_group import DateGroup, DateGroupHeader, NoActivityLabel
 
@@ -38,6 +38,7 @@ __all__ = [
     "LogCard",
     "MetricPill",
     "OverflowPill",
+    "SwipeableLogCard",
 
     # Empty state components
     "EmptyStateWidget",
