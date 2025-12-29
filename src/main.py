@@ -164,6 +164,7 @@ class HealthLogOpsApp(MDApp):
 
         self.db_manager = DatabaseManager(db_path)
         self.db_manager.seed_default_categories()
+        self.db_manager.update_default_categories()  # Update templates and add new categories
 
     # ========== NAVIGATION METHODS ==========
 
@@ -208,9 +209,11 @@ class HealthLogOpsApp(MDApp):
 
     def open_settings(self) -> None:
         """
-        Navigate to the Settings screen.
+        Navigate to the About screen.
 
         Uses a slide-left animation for forward navigation.
+        Note: Settings options (theme, view mode) are now accessible
+        from the home screen's three-dot menu.
         """
         if self.screen_manager:
             self.screen_manager.transition.direction = "left"

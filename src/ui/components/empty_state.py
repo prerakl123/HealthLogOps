@@ -53,7 +53,8 @@ class EmptyStateWidget(MDBoxLayout):
             font_size=sp(72),
             theme_icon_color="Custom",
             icon_color=(0.75, 0.75, 0.78, 1),
-            halign="center"
+            halign="center",
+            pos_hint={"center_x": 0.5, "center_y": 0.5}
         )
         self.add_widget(icon)
 

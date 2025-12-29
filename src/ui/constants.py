@@ -101,6 +101,10 @@ METRIC_ICONS: Final[dict[str, str]] = {
     "quality_1_10": "star",
     "glasses": "cup-water",
     "avg_heart_rate": "heart-pulse",
+    "incline": "angle-acute",
+    "incline_percent": "angle-acute",
+    "speed": "speedometer",
+    "speed_kmh": "speedometer",
     "custom": "tag-outline",
     "default": "circle-small"
 }
@@ -124,7 +128,7 @@ ACTIVITY_SUGGESTIONS: Final[dict[str, list[str]]] = {
     ],
     "Cardio": [
         "Morning Run", "Evening Jog", "HIIT Workout", "Cycling", "Swimming",
-        "Jump Rope", "Treadmill", "Elliptical", "Stair Climber", "Rowing",
+        "Jump Rope", "Treadmill", "Treadmill Walk", "Elliptical", "Stair Climber", "Rowing",
         "Sprint Intervals", "Dancing", "Aerobics", "Walking", "Hiking"
     ],
     "Meal": [
@@ -139,6 +143,9 @@ ACTIVITY_SUGGESTIONS: Final[dict[str, list[str]]] = {
     ],
     "Weight Log": [
         "Morning Weight", "Evening Weight", "Weekly Check", "Monthly Check"
+    ],
+    "Daily Steps": [
+        "Daily Total", "Morning Walk", "Evening Walk", "Office Commute", "Weekend Hike"
     ]
 }
 """
@@ -160,7 +167,7 @@ DEFAULT_ANIMATION_DURATION: Final[float] = 0.2
 DROPDOWN_MAX_HEIGHT: Final[int] = 250
 """Maximum height in density-independent pixels for dropdown menus."""
 
-SUGGESTION_MAX_HEIGHT: Final[int] = 180
+SUGGESTION_MAX_HEIGHT: Final[int] = 250
 """Maximum height in density-independent pixels for suggestion dropdowns."""
 
 MAX_VISIBLE_SUGGESTIONS: Final[int] = 5

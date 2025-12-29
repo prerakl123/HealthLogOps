@@ -62,11 +62,22 @@
                         size_hint_x: None
                         width: dp(8)
 
+                    # View Mode Toggle Button (Eye icon)
                     MDIconButton:
-                        icon: "cog-outline"
+                        id: view_mode_button
+                        icon: "eye-outline"
                         theme_icon_color: "Custom"
                         icon_color: (1, 1, 1, 0.9)
-                        on_release: app.open_settings()
+                        on_release: root.cycle_view_mode()
+                        on_touch_down: if self.collide_point(*args[1].pos): root.on_view_button_touch_down(args[1])
+                        on_touch_up: if self.collide_point(*args[1].pos): root.on_view_button_touch_up(args[1])
+
+                    # Three-dot Menu Button
+                    MDIconButton:
+                        icon: "dots-vertical"
+                        theme_icon_color: "Custom"
+                        icon_color: (1, 1, 1, 0.9)
+                        on_release: root.open_menu(self)
 
                 # Subtitle
                 MDLabel:
@@ -206,11 +217,11 @@
             MDLabel:
                 text: "Log Activity"
                 font_style: "Title"
-                role: "medium"
+                role: "large"
                 bold: True
                 theme_text_color: "Custom"
                 text_color: (0.2, 0.2, 0.25, 1)
-                pos_hint: {"center_y": 0.75}
+                pos_hint: {"center_y": 0.45}
 
             Widget:
                 size_hint_x: 1
@@ -269,10 +280,11 @@
                         MDLabel:
                             text: "Category"
                             font_style: "Title"
-                            role: "small"
+                            role: "medium"
                             bold: True
                             theme_text_color: "Custom"
                             text_color: (0.2, 0.2, 0.25, 1)
+                            pos_hint: {"center_y": 0.4}
 
                     # Styled Category Dropdown
                     StyledDropdown:
@@ -311,10 +323,11 @@
                         MDLabel:
                             text: "Activity Name"
                             font_style: "Title"
-                            role: "small"
+                            role: "medium"
                             bold: True
                             theme_text_color: "Custom"
                             text_color: (0.2, 0.2, 0.25, 1)
+                            pos_hint: {"center_y": 0.4}
 
                     # Activity field with suggestions
                     ActivitySuggestionField:
@@ -353,10 +366,11 @@
                         MDLabel:
                             text: "Details"
                             font_style: "Title"
-                            role: "small"
+                            role: "medium"
                             bold: True
                             theme_text_color: "Custom"
                             text_color: (0.2, 0.2, 0.25, 1)
+                            pos_hint: {"center_y": 0.4}
 
                         Widget:
                             size_hint_x: 1
@@ -416,10 +430,11 @@
                         MDLabel:
                             text: "Notes"
                             font_style: "Title"
-                            role: "small"
+                            role: "medium"
                             bold: True
                             theme_text_color: "Custom"
                             text_color: (0.2, 0.2, 0.25, 1)
+                            pos_hint: {"center_y": 0.4}
 
                     MDTextField:
                         id: notes_field
@@ -438,7 +453,7 @@
 
 
 # ============================================================
-# SETTINGS SCREEN
+# ABOUT SCREEN (formerly Settings)
 # ============================================================
 <SettingsScreen>:
     name: "settings"
@@ -470,7 +485,7 @@
                 pos_hint: {"center_y": 0.5}
 
             MDLabel:
-                text: "Settings"
+                text: "About"
                 font_style: "Title"
                 role: "medium"
                 bold: True
@@ -487,11 +502,11 @@
                 spacing: dp(12)
                 adaptive_height: True
 
-                # Theme Settings Card
+                # App Logo/Icon Card
                 MDCard:
                     orientation: "vertical"
-                    padding: dp(16)
-                    spacing: dp(12)
+                    padding: dp(24)
+                    spacing: dp(16)
                     size_hint_y: None
                     height: self.minimum_height
                     style: "elevated"
@@ -502,137 +517,51 @@
                     shadow_softness: 8
                     shadow_offset: (0, 2)
 
-                    MDLabel:
-                        text: "Appearance"
-                        font_style: "Title"
-                        role: "small"
-                        bold: True
-                        theme_text_color: "Custom"
-                        text_color: (0.2, 0.2, 0.25, 1)
+                    MDBoxLayout:
+                        orientation: "vertical"
                         adaptive_height: True
+                        spacing: dp(8)
 
-                    MDBoxLayout:
-                        orientation: "horizontal"
-                        size_hint_y: None
-                        height: dp(48)
-                        spacing: dp(10)
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(72)
+                            spacing: dp(16)
+                            pos_hint: {"center_x": 0.5}
 
-                        MDIcon:
-                            icon: "theme-light-dark"
-                            theme_icon_color: "Custom"
-                            icon_color: (0, 0.59, 0.53, 1)
-                            pos_hint: {"center_y": 0.5}
-                            size_hint_x: None
-                            width: dp(24)
-
-                        MDLabel:
-                            text: "Dark Mode"
-                            theme_text_color: "Custom"
-                            text_color: (0.3, 0.3, 0.35, 1)
-                            pos_hint: {"center_y": 0.5}
-
-                        Widget:
-                            size_hint_x: 1
-
-                        MDSwitch:
-                            id: dark_mode_switch
-                            pos_hint: {"center_y": 0.5}
-                            on_active: app.toggle_theme(self.active)
-
-                    # View Mode option
-                    MDBoxLayout:
-                        orientation: "horizontal"
-                        size_hint_y: None
-                        height: dp(48)
-                        spacing: dp(10)
-                        on_touch_down: if self.collide_point(*args[1].pos): root.open_view_mode_dialog()
-
-                        MDIcon:
-                            icon: "view-dashboard-outline"
-                            theme_icon_color: "Custom"
-                            icon_color: (0, 0.59, 0.53, 1)
-                            pos_hint: {"center_y": 0.5}
-                            size_hint_x: None
-                            width: dp(24)
+                            MDIcon:
+                                icon: "heart-pulse"
+                                theme_icon_color: "Custom"
+                                icon_color: (0, 0.59, 0.53, 1)
+                                font_size: dp(64)
+                                size_hint_x: None
+                                width: dp(72)
+                                pos_hint: {"center_y": 0.5}
 
                         MDLabel:
-                            text: "View Mode"
+                            text: "HealthLogOps"
+                            font_style: "Display"
+                            role: "small"
+                            bold: True
+                            halign: "center"
                             theme_text_color: "Custom"
-                            text_color: (0.3, 0.3, 0.35, 1)
-                            pos_hint: {"center_y": 0.5}
+                            text_color: (0.2, 0.2, 0.25, 1)
+                            adaptive_height: True
 
-                        Widget:
-                            size_hint_x: 1
+                        MDLabel:
+                            text: "Version 0.1.0"
+                            font_style: "Title"
+                            role: "medium"
+                            halign: "center"
+                            theme_text_color: "Custom"
+                            text_color: (0, 0.59, 0.53, 1)
+                            adaptive_height: True
 
-                        MDIcon:
-                            icon: "chevron-right"
-                            theme_icon_color: "Custom"
-                            icon_color: (0.5, 0.5, 0.55, 1)
-                            pos_hint: {"center_y": 0.5}
-                            size_hint_x: None
-                            width: dp(24)
-
-                # Categories Management Card
+                # Description Card
                 MDCard:
                     orientation: "vertical"
                     padding: dp(16)
                     spacing: dp(12)
-                    size_hint_y: None
-                    height: self.minimum_height
-                    style: "elevated"
-                    theme_bg_color: "Custom"
-                    md_bg_color: (1, 1, 1, 1)
-                    theme_shadow_color: "Custom"
-                    shadow_color: (0, 0, 0, 0.04)
-                    shadow_softness: 8
-                    shadow_offset: (0, 2)
-                    on_touch_down: if self.collide_point(*args[1].pos): root.open_categories_dialog()
-
-                    MDLabel:
-                        text: "Categories"
-                        font_style: "Title"
-                        role: "small"
-                        bold: True
-                        theme_text_color: "Custom"
-                        text_color: (0.2, 0.2, 0.25, 1)
-                        adaptive_height: True
-
-                    MDBoxLayout:
-                        orientation: "horizontal"
-                        size_hint_y: None
-                        height: dp(48)
-                        spacing: dp(10)
-
-                        MDIcon:
-                            icon: "folder-plus-outline"
-                            theme_icon_color: "Custom"
-                            icon_color: (0, 0.59, 0.53, 1)
-                            pos_hint: {"center_y": 0.5}
-                            size_hint_x: None
-                            width: dp(24)
-
-                        MDLabel:
-                            text: "Manage Categories"
-                            theme_text_color: "Custom"
-                            text_color: (0.3, 0.3, 0.35, 1)
-                            pos_hint: {"center_y": 0.5}
-
-                        Widget:
-                            size_hint_x: 1
-
-                        MDIcon:
-                            icon: "chevron-right"
-                            theme_icon_color: "Custom"
-                            icon_color: (0.5, 0.5, 0.55, 1)
-                            pos_hint: {"center_y": 0.5}
-                            size_hint_x: None
-                            width: dp(24)
-
-                # About Card
-                MDCard:
-                    orientation: "vertical"
-                    padding: dp(16)
-                    spacing: dp(8)
                     size_hint_y: None
                     height: self.minimum_height
                     style: "elevated"
@@ -653,13 +582,187 @@
                         adaptive_height: True
 
                     MDLabel:
-                        text: "HealthLogOps v0.1.0"
+                        text: "Your personal health activity tracker. Track your workouts, meals, sleep, water intake, weight, and daily steps all in one place."
+                        theme_text_color: "Custom"
+                        text_color: (0.4, 0.4, 0.45, 1)
+                        adaptive_height: True
+
+                # Features Card
+                MDCard:
+                    orientation: "vertical"
+                    padding: dp(16)
+                    spacing: dp(12)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    style: "elevated"
+                    theme_bg_color: "Custom"
+                    md_bg_color: (1, 1, 1, 1)
+                    theme_shadow_color: "Custom"
+                    shadow_color: (0, 0, 0, 0.04)
+                    shadow_softness: 8
+                    shadow_offset: (0, 2)
+
+                    MDLabel:
+                        text: "Features"
+                        font_style: "Title"
+                        role: "small"
+                        bold: True
+                        theme_text_color: "Custom"
+                        text_color: (0.2, 0.2, 0.25, 1)
+                        adaptive_height: True
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(32)
+                        spacing: dp(12)
+
+                        MDIcon:
+                            icon: "weight-lifter"
+                            theme_icon_color: "Custom"
+                            icon_color: (0.91, 0.30, 0.24, 1)
+                            size_hint_x: None
+                            width: dp(24)
+                            pos_hint: {"center_y": 0.5}
+
+                        MDLabel:
+                            text: "Strength Training Tracking"
+                            theme_text_color: "Custom"
+                            text_color: (0.4, 0.4, 0.45, 1)
+                            pos_hint: {"center_y": 0.5}
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(32)
+                        spacing: dp(12)
+
+                        MDIcon:
+                            icon: "run-fast"
+                            theme_icon_color: "Custom"
+                            icon_color: (0.20, 0.66, 0.33, 1)
+                            size_hint_x: None
+                            width: dp(24)
+                            pos_hint: {"center_y": 0.5}
+
+                        MDLabel:
+                            text: "Cardio & Exercise Logging"
+                            theme_text_color: "Custom"
+                            text_color: (0.4, 0.4, 0.45, 1)
+                            pos_hint: {"center_y": 0.5}
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(32)
+                        spacing: dp(12)
+
+                        MDIcon:
+                            icon: "food-apple"
+                            theme_icon_color: "Custom"
+                            icon_color: (1.0, 0.60, 0.0, 1)
+                            size_hint_x: None
+                            width: dp(24)
+                            pos_hint: {"center_y": 0.5}
+
+                        MDLabel:
+                            text: "Meal & Nutrition Tracking"
+                            theme_text_color: "Custom"
+                            text_color: (0.4, 0.4, 0.45, 1)
+                            pos_hint: {"center_y": 0.5}
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(32)
+                        spacing: dp(12)
+
+                        MDIcon:
+                            icon: "shoe-print"
+                            theme_icon_color: "Custom"
+                            icon_color: (0.61, 0.15, 0.69, 1)
+                            size_hint_x: None
+                            width: dp(24)
+                            pos_hint: {"center_y": 0.5}
+
+                        MDLabel:
+                            text: "Daily Steps Tracking"
+                            theme_text_color: "Custom"
+                            text_color: (0.4, 0.4, 0.45, 1)
+                            pos_hint: {"center_y": 0.5}
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(32)
+                        spacing: dp(12)
+
+                        MDIcon:
+                            icon: "sleep"
+                            theme_icon_color: "Custom"
+                            icon_color: (0.40, 0.23, 0.72, 1)
+                            size_hint_x: None
+                            width: dp(24)
+                            pos_hint: {"center_y": 0.5}
+
+                        MDLabel:
+                            text: "Sleep Monitoring"
+                            theme_text_color: "Custom"
+                            text_color: (0.4, 0.4, 0.45, 1)
+                            pos_hint: {"center_y": 0.5}
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(32)
+                        spacing: dp(12)
+
+                        MDIcon:
+                            icon: "theme-light-dark"
+                            theme_icon_color: "Custom"
+                            icon_color: (0, 0.59, 0.53, 1)
+                            size_hint_x: None
+                            width: dp(24)
+                            pos_hint: {"center_y": 0.5}
+
+                        MDLabel:
+                            text: "Dark & Light Theme"
+                            theme_text_color: "Custom"
+                            text_color: (0.4, 0.4, 0.45, 1)
+                            pos_hint: {"center_y": 0.5}
+
+                # Tech Stack Card
+                MDCard:
+                    orientation: "vertical"
+                    padding: dp(16)
+                    spacing: dp(8)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    style: "elevated"
+                    theme_bg_color: "Custom"
+                    md_bg_color: (1, 1, 1, 1)
+                    theme_shadow_color: "Custom"
+                    shadow_color: (0, 0, 0, 0.04)
+                    shadow_softness: 8
+                    shadow_offset: (0, 2)
+
+                    MDLabel:
+                        text: "Built With"
+                        font_style: "Title"
+                        role: "small"
+                        bold: True
+                        theme_text_color: "Custom"
+                        text_color: (0.2, 0.2, 0.25, 1)
+                        adaptive_height: True
+
+                    MDLabel:
+                        text: "Python • Kivy • KivyMD • SQLite"
                         theme_text_color: "Custom"
                         text_color: (0.5, 0.5, 0.55, 1)
                         adaptive_height: True
 
                     MDLabel:
-                        text: "Your personal health activity tracker"
+                        text: "Material Design 3"
                         theme_text_color: "Custom"
                         text_color: (0.5, 0.5, 0.55, 1)
                         adaptive_height: True

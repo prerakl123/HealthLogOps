@@ -1,0 +1,15 @@
+[project]
+name = "healthlogops"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11.9"
+dependencies = [
+    "buildozer>=1.5.0",
+    "kivy-reloader>=0.7.2",
+    "kivymd>=1.2.0",
+    "plyer>=2.1.0",
+]
+
+[tool.uv.sources]
+kivymd = { url = "https://github.com/kivymd/KivyMD/archive/master.zip" }

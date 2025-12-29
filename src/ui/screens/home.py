@@ -26,6 +26,17 @@ from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.label import MDLabel
 from kivymd.uix.screen import MDScreen
+from kivymd.uix.menu import MDDropdownMenu
+from kivymd.uix.dialog import (
+    MDDialog,
+    MDDialogHeadlineText,
+    MDDialogSupportingText,
+    MDDialogContentContainer,
+    MDDialogButtonContainer,
+)
+from kivymd.uix.button import MDButton, MDButtonText
+from kivymd.uix.list import MDListItem, MDListItemLeadingIcon, MDListItemHeadlineText
+from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
 from ui.components import EmptyStateWidget, DateGroup
 
 
@@ -170,6 +181,12 @@ class HomeScreen(MDScreen):
         self._all_logs: list[dict[str, Any]] = []
         self._cached_categories: set = set()
         self._filters_need_refresh: bool = True
+        self._menu: Optional[MDDropdownMenu] = None
+        self._view_mode_dialog: Optional[MDDialog] = None
+        self._categories_dialog: Optional[MDDialog] = None
+        self._about_dialog: Optional[MDDialog] = None
+        self._long_press_event: Optional[Clock] = None
+        self._long_press_threshold: float = 0.5  # seconds
 
     def on_enter(self) -> None:
         """
@@ -385,3 +402,224 @@ class HomeScreen(MDScreen):
         if mode in ("compact", "balanced", "detailed"):
             self.view_mode = mode
             self._display_filtered_logs()
+            self._update_view_mode_icon()
+
+    def _update_view_mode_icon(self) -> None:
+        """Update the view mode button icon based on current mode."""
+        view_button = self.ids.get("view_mode_button")
+        if view_button:
+            icons = {
+                "compact": "eye-outline",
+                "balanced": "eye",
+                "detailed": "eye-plus"
+            }
+            view_button.icon = icons.get(self.view_mode, "eye-outline")
+
+    def cycle_view_mode(self) -> None:
+        """Cycle through view modes: compact -> balanced -> detailed -> compact."""
+        modes = ["compact", "balanced", "detailed"]
+        current_idx = modes.index(self.view_mode) if self.view_mode in modes else 0
+        next_idx = (current_idx + 1) % len(modes)
+        next_mode = modes[next_idx]
+        self.set_view_mode(next_mode)
+        MDSnackbar(
+            MDSnackbarText(text=f"View: {next_mode.title()}"),
+            y=dp(24),
+            pos_hint={"center_x": 0.5},
+            size_hint_x=0.9,
+        ).open()
+
+    def on_view_button_touch_down(self, touch) -> None:
+        """Handle touch down on view mode button for long press detection."""
+        if self._long_press_event:
+            self._long_press_event.cancel()
+        self._long_press_event = Clock.schedule_once(
+            lambda dt: self._on_view_button_long_press(),
+            self._long_press_threshold
+        )
+
+    def on_view_button_touch_up(self, touch) -> None:
+        """Handle touch up on view mode button."""
+        if self._long_press_event:
+            self._long_press_event.cancel()
+            self._long_press_event = None
+
+    def _on_view_button_long_press(self) -> None:
+        """Handle long press on view mode button - open view mode dialog."""
+        self._long_press_event = None
+        self.open_view_mode_dialog()
+
+    def open_view_mode_dialog(self) -> None:
+        """Open dialog to select view mode."""
+        content = MDBoxLayout(
+            orientation="vertical",
+            spacing=dp(4),
+            adaptive_height=True,
+            padding=[0, dp(8), 0, dp(8)]
+        )
+
+        modes = [
+            ("compact", "view-compact", "Compact", "Shows only activity name and time"),
+            ("balanced", "view-dashboard", "Balanced", "Shows activity, time, and key metrics"),
+            ("detailed", "view-agenda", "Detailed", "Shows all info including notes"),
+        ]
+
+        for mode_id, icon, title, subtitle in modes:
+            item = MDListItem(
+                MDListItemLeadingIcon(icon=icon),
+                MDListItemHeadlineText(text=title),
+                on_release=lambda x, m=mode_id: self._select_view_mode(m)
+            )
+            if mode_id == self.view_mode:
+                item.md_bg_color = (0, 0.59, 0.53, 0.1)
+            content.add_widget(item)
+
+        self._view_mode_dialog = MDDialog(
+            MDDialogHeadlineText(text="View Mode"),
+            MDDialogContentContainer(content),
+            MDDialogButtonContainer(
+                MDButton(
+                    MDButtonText(text="Cancel"),
+                    style="text",
+                    on_release=lambda x: self._view_mode_dialog.dismiss()
+                ),
+                spacing="8dp",
+            ),
+        )
+        self._view_mode_dialog.open()
+
+    def _select_view_mode(self, mode: str) -> None:
+        """Handle view mode selection from dialog."""
+        if self._view_mode_dialog:
+            self._view_mode_dialog.dismiss()
+        self.set_view_mode(mode)
+        MDSnackbar(
+            MDSnackbarText(text=f"View mode set to {mode.title()}"),
+            y=dp(24),
+            pos_hint={"center_x": 0.5},
+            size_hint_x=0.9,
+        ).open()
+
+    def open_menu(self, button) -> None:
+        """Open the three-dot dropdown menu."""
+        app = MDApp.get_running_app()
+        is_dark = app.is_dark_mode() if app and hasattr(app, 'is_dark_mode') else False
+
+        menu_items = [
+            {
+                "text": "Dark Mode",
+                "leading_icon": "theme-light-dark",
+                "trailing_icon": "check" if is_dark else "",
+                "on_release": lambda: self._toggle_theme(),
+            },
+            {
+                "text": "Categories",
+                "leading_icon": "folder-plus-outline",
+                "on_release": lambda: self._open_categories(),
+            },
+            {
+                "text": "About",
+                "leading_icon": "information-outline",
+                "on_release": lambda: self._open_about(),
+            },
+        ]
+
+        self._menu = MDDropdownMenu(
+            caller=button,
+            items=menu_items,
+        )
+        self._menu.open()
+
+    def _toggle_theme(self) -> None:
+        """Toggle between light and dark theme."""
+        if self._menu:
+            self._menu.dismiss()
+        app = MDApp.get_running_app()
+        if app:
+            is_dark = app.is_dark_mode() if hasattr(app, 'is_dark_mode') else False
+            app.toggle_theme(not is_dark)
+            mode_name = "Dark" if not is_dark else "Light"
+            MDSnackbar(
+                MDSnackbarText(text=f"{mode_name} mode enabled"),
+                y=dp(24),
+                pos_hint={"center_x": 0.5},
+                size_hint_x=0.9,
+            ).open()
+
+    def _open_categories(self) -> None:
+        """Open the categories management dialog."""
+        if self._menu:
+            self._menu.dismiss()
+
+        if not self.db_manager:
+            return
+
+        categories = self.db_manager.get_all_categories()
+
+        content = MDBoxLayout(
+            orientation="vertical",
+            spacing=dp(4),
+            adaptive_height=True,
+            padding=[0, dp(8), 0, dp(8)]
+        )
+
+        if not categories:
+            content.add_widget(MDLabel(
+                text="No categories available",
+                halign="center",
+                theme_text_color="Custom",
+                text_color=(0.5, 0.5, 0.55, 1)
+            ))
+        else:
+            from kivymd.uix.divider import MDDivider
+            for cat in categories:
+                item = MDListItem(
+                    MDListItemLeadingIcon(icon=cat.get("icon", "folder")),
+                    MDListItemHeadlineText(text=cat["name"]),
+                )
+                content.add_widget(item)
+                content.add_widget(MDDivider())
+
+        self._categories_dialog = MDDialog(
+            MDDialogHeadlineText(text="Categories"),
+            MDDialogSupportingText(
+                text="These are the available activity categories. Custom category management coming soon!"
+            ),
+            MDDialogContentContainer(content),
+            MDDialogButtonContainer(
+                MDButton(
+                    MDButtonText(text="Close"),
+                    style="text",
+                    on_release=lambda x: self._categories_dialog.dismiss()
+                ),
+                spacing="8dp",
+            ),
+        )
+        self._categories_dialog.open()
+
+    def _open_about(self) -> None:
+        """Open the about dialog."""
+        if self._menu:
+            self._menu.dismiss()
+
+        app = MDApp.get_running_app()
+
+        self._about_dialog = MDDialog(
+            MDDialogHeadlineText(text="About HealthLogOps"),
+            MDDialogSupportingText(
+                text="HealthLogOps v0.1.0\n\n"
+                     "Your personal health activity tracker.\n\n"
+                     "Track your workouts, meals, sleep, water intake, "
+                     "weight, and daily steps all in one place.\n\n"
+                     "Built with Python and KivyMD."
+            ),
+            MDDialogButtonContainer(
+                MDButton(
+                    MDButtonText(text="Close"),
+                    style="text",
+                    on_release=lambda x: self._about_dialog.dismiss()
+                ),
+                spacing="8dp",
+            ),
+        )
+        self._about_dialog.open()

@@ -16,11 +16,13 @@ Example:
 
 from typing import Callable, Optional
 
-from kivy.animation import Animation
+from kivy.clock import Clock
 from kivy.graphics import Color, RoundedRectangle
 from kivy.metrics import dp
-from kivy.properties import BooleanProperty, ListProperty, StringProperty
+from kivy.properties import BooleanProperty, ListProperty, NumericProperty, StringProperty
 from kivy.uix.behaviors import ButtonBehavior
+from kivy.uix.modalview import ModalView
+from kivy.uix.scrollview import ScrollView
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.label import MDIcon, MDLabel
 
@@ -91,7 +93,7 @@ class DropdownItem(ButtonBehavior, MDBoxLayout):
 
         # Background for hover effect
         with self.canvas.before:
-            Color(0, 0, 0, 0)
+            self._bg_color = Color(0, 0, 0, 0)
             self._bg = RoundedRectangle(
                 pos=self.pos,
                 size=self.size,
@@ -138,14 +140,7 @@ class DropdownItem(ButtonBehavior, MDBoxLayout):
 
         Changes the background color to indicate the pressed state.
         """
-        self.canvas.before.clear()
-        with self.canvas.before:
-            Color(0, 0.59, 0.53, 0.15)
-            self._bg = RoundedRectangle(
-                pos=self.pos,
-                size=self.size,
-                radius=[dp(8)]
-            )
+        self._bg_color.rgba = (0, 0.59, 0.53, 0.15)
 
     def on_release(self) -> None:
         """
@@ -154,16 +149,132 @@ class DropdownItem(ButtonBehavior, MDBoxLayout):
         Resets the visual state and invokes the on_select callback
         if one was provided during initialization.
         """
-        self.canvas.before.clear()
-        with self.canvas.before:
-            Color(0, 0, 0, 0)
-            self._bg = RoundedRectangle(
-                pos=self.pos,
-                size=self.size,
-                radius=[dp(8)]
-            )
+        self._bg_color.rgba = (0, 0, 0, 0)
         if self.on_select_callback:
             self.on_select_callback(self.text)
+
+
+class DropdownPopup(ModalView):
+    """
+    A popup container for dropdown items using ModalView.
+
+    Uses ModalView for proper overlay handling with transparent background,
+    allowing clicks outside to dismiss.
+    """
+
+    max_height = NumericProperty(dp(250))
+    """Maximum height of the dropdown popup."""
+
+    def __init__(self, attached_widget=None, **kwargs):
+        # Set ModalView properties before super().__init__
+        kwargs.setdefault('background', '')
+        kwargs.setdefault('background_color', (0, 0, 0, 0))
+        kwargs.setdefault('overlay_color', (0, 0, 0, 0))
+        kwargs.setdefault('auto_dismiss', True)
+        kwargs.setdefault('size_hint', (None, None))
+
+        super().__init__(**kwargs)
+
+        self._attached_widget = attached_widget
+
+        # Container for items
+        self.container = MDBoxLayout(
+            orientation="vertical",
+            size_hint_y=None,
+            padding=[dp(4), dp(4)],
+            spacing=dp(2),
+        )
+        self.container.bind(minimum_height=self.container.setter('height'))
+
+        # ScrollView for items
+        self.scroll_view = ScrollView(
+            size_hint=(1, 1),
+            do_scroll_x=False,
+            bar_width=dp(3),
+            bar_color=(0, 0.59, 0.53, 0.4),
+        )
+        self.scroll_view.add_widget(self.container)
+
+        # Wrapper with background
+        self.wrapper = MDBoxLayout(
+            orientation="vertical",
+            size_hint=(1, 1),
+        )
+
+        # Add background graphics to wrapper
+        with self.wrapper.canvas.before:
+            Color(0, 0, 0, 0.08)
+            self._shadow = RoundedRectangle(radius=[dp(0), dp(0), dp(12), dp(12)])
+            Color(1, 1, 1, 1)
+            self._bg = RoundedRectangle(radius=[dp(0), dp(0), dp(12), dp(12)])
+            Color(0.90, 0.91, 0.92, 1)
+            self._border = RoundedRectangle(radius=[dp(0), dp(0), dp(12), dp(12)])
+            Color(1, 1, 1, 1)
+            self._inner = RoundedRectangle(radius=[dp(0), dp(0), dp(12), dp(12)])
+
+        self.wrapper.bind(pos=self._update_wrapper_graphics, size=self._update_wrapper_graphics)
+        self.wrapper.add_widget(self.scroll_view)
+        super().add_widget(self.wrapper)
+
+    def _update_wrapper_graphics(self, instance, value):
+        """Update background graphics when position/size changes."""
+        self._shadow.pos = (instance.x + dp(2), instance.y - dp(2))
+        self._shadow.size = instance.size
+        self._bg.pos = instance.pos
+        self._bg.size = instance.size
+        self._border.pos = instance.pos
+        self._border.size = instance.size
+        self._inner.pos = (instance.x + dp(1), instance.y + dp(1))
+        self._inner.size = (instance.width - dp(2), instance.height - dp(2))
+
+    def _align_center(self, *args):
+        """Override ModalView's centering behavior to use custom positioning."""
+        # Do nothing - we handle positioning ourselves in _position_popup
+        pass
+
+    def _position_popup(self):
+        """Position the popup below the attached widget."""
+        if self._attached_widget:
+            # Get position in window coordinates
+            pos = self._attached_widget.to_window(0, 0, initial=False)
+
+            # Calculate content height
+            content_height = self.container.height + dp(8)
+            target_height = min(content_height, self.max_height)
+            print("Content height:", content_height)
+            print("Max height:", self.max_height)
+            print("pos[1]:", pos[1])
+            print("self.height:", self.height)
+
+            # Set size
+            self.width = self._attached_widget.width
+            self.height = target_height
+
+            # Position below the widget (pos[1] is bottom of widget)
+            self.x = dp(32)
+            self.y = pos[1] / 2 + target_height
+            print("self.y:", self.y)
+            print()
+
+    def open(self, *args, **kwargs):
+        """Open the dropdown and position it below the attached widget."""
+        # Position before opening
+        self._position_popup()
+        super().open(*args, **kwargs)
+        # Re-position after open to ensure layout is correct
+        Clock.schedule_once(lambda dt: self._position_popup(), 0)
+
+    def on_open(self):
+        """Ensure positioning after ModalView opens."""
+        self._position_popup()
+
+    def add_item(self, item):
+        """Add a dropdown item to the container."""
+        self.container.add_widget(item)
+
+    def clear_items(self):
+        """Clear all items from the dropdown."""
+        self.container.clear_widgets()
 
 
 class StyledDropdown(MDBoxLayout):
@@ -171,7 +282,7 @@ class StyledDropdown(MDBoxLayout):
     A beautifully styled dropdown menu with smooth animations.
 
     Replaces the default Kivy Spinner with a modern dropdown that features:
-    - Animated open/close transitions
+    - ModalView-based popup for reliable z-ordering
     - Category-specific icons
     - Clean Material Design styling
     - Touch-friendly interaction
@@ -209,16 +320,9 @@ class StyledDropdown(MDBoxLayout):
         on_select: Optional[Callable[[str], None]] = None,
         **kwargs
     ) -> None:
-        """
-        Initialize a StyledDropdown.
-
-        :param on_select: Callback function invoked when a selection is made.
-        :param kwargs: Additional keyword arguments passed to MDBoxLayout.
-        """
         super().__init__(**kwargs)
         self.on_select_callback = on_select
-        self.dropdown_container: Optional[MDBoxLayout] = None
-        self._dropdown_anim: Optional[Animation] = None
+        self._dropdown: Optional[DropdownPopup] = None
 
         self.orientation = "vertical"
         self.size_hint_y = None
@@ -299,8 +403,8 @@ class StyledDropdown(MDBoxLayout):
         )
         button_box.add_widget(self.chevron)
 
-        # Make clickable
-        button_box.bind(on_touch_down=self._on_button_touch)
+        # Make clickable - using on_touch_up to avoid issues with touch propagation
+        button_box.bind(on_touch_up=self._on_button_touch)
 
         self.button_box = button_box
         self.add_widget(button_box)
@@ -327,10 +431,16 @@ class StyledDropdown(MDBoxLayout):
         :param touch: The touch event object.
         :returns: True if the touch was handled, False otherwise.
         """
-        if instance.collide_point(*touch.pos):
-            self.toggle_dropdown()
+        if instance.collide_point(*touch.pos) and not self.is_open:
+            # Schedule the toggle to avoid touch event conflicts
+            Clock.schedule_once(lambda dt: self._do_open(), 0)
             return True
         return False
+
+    def _do_open(self) -> None:
+        """Actually open the dropdown (called from scheduled callback)."""
+        if not self.is_open:
+            self.open_dropdown()
 
     def toggle_dropdown(self) -> None:
         """
@@ -346,69 +456,21 @@ class StyledDropdown(MDBoxLayout):
 
     def open_dropdown(self) -> None:
         """
-        Open the dropdown with a fade-in animation.
+        Open the dropdown with items populated.
 
-        Creates the dropdown container, populates it with items,
-        and animates it into view. Does nothing if already open
+        Creates the dropdown popup, populates it with items,
+        and opens it below the button. Does nothing if already open
         or if there are no values to display.
         """
         if self.is_open or not self.values:
             return
 
         self.is_open = True
-
-        # Change chevron icon
         self.chevron.icon = "chevron-up"
 
-        # Remove any existing dropdown container first
-        if self.dropdown_container and self.dropdown_container.parent:
-            self.remove_widget(self.dropdown_container)
-            self.dropdown_container = None
-
-        # Create dropdown container
-        self.dropdown_container = MDBoxLayout(
-            orientation="vertical",
-            size_hint_y=None,
-            height=0,
-            padding=[dp(4), dp(4)],
-            spacing=dp(2),
-            opacity=0
-        )
-
-        # Background with shadow
-        with self.dropdown_container.canvas.before:
-            # Soft shadow
-            Color(0, 0, 0, 0.04)
-            self._drop_shadow = RoundedRectangle(
-                pos=(self.dropdown_container.x + dp(2), self.dropdown_container.y - dp(2)),
-                size=self.dropdown_container.size,
-                radius=[dp(12)]
-            )
-            # White background
-            Color(1, 1, 1, 1)
-            self._drop_bg = RoundedRectangle(
-                pos=self.dropdown_container.pos,
-                size=self.dropdown_container.size,
-                radius=[dp(12)]
-            )
-            # Subtle border
-            Color(0.92, 0.93, 0.94, 1)
-            self._drop_border = RoundedRectangle(
-                pos=self.dropdown_container.pos,
-                size=self.dropdown_container.size,
-                radius=[dp(12)]
-            )
-            Color(1, 1, 1, 1)
-            self._drop_inner = RoundedRectangle(
-                pos=(self.dropdown_container.x + dp(1), self.dropdown_container.y + dp(1)),
-                size=(self.dropdown_container.width - dp(2), self.dropdown_container.height - dp(2)),
-                radius=[dp(11)]
-            )
-
-        self.dropdown_container.bind(
-            pos=self._update_dropdown_graphics,
-            size=self._update_dropdown_graphics
-        )
+        # Create dropdown popup
+        self._dropdown = DropdownPopup(attached_widget=self.button_box)
+        self._dropdown.bind(on_dismiss=self._on_dropdown_dismiss)
 
         # Add items
         for value in self.values:
@@ -418,69 +480,31 @@ class StyledDropdown(MDBoxLayout):
                 icon=icon,
                 on_select=self._on_item_selected
             )
-            self.dropdown_container.add_widget(item)
+            self._dropdown.add_item(item)
 
-        self.add_widget(self.dropdown_container)
-
-        # Calculate target height
-        target_height = min(len(self.values) * dp(48) + dp(8), dp(250))
-
-        # Animate open
-        anim = Animation(height=target_height, opacity=1, duration=0.2, t='out_cubic')
-        anim.start(self.dropdown_container)
-
-        # Update parent height
-        self.height = dp(52) + target_height + dp(8)
+        # Open dropdown
+        self._dropdown.open()
 
     def close_dropdown(self) -> None:
         """
-        Close the dropdown with a fade-out animation.
+        Close the dropdown.
 
-        Animates the dropdown container out of view and removes it
-        from the widget tree. Does nothing if already closed.
+        Dismisses the dropdown popup. Does nothing if already closed.
         """
-        if not self.is_open or not self.dropdown_container:
+        if not self.is_open or not self._dropdown:
             return
 
+        self._dropdown.dismiss()
+
+    def _on_dropdown_dismiss(self, *args) -> None:
+        """
+        Handle dropdown dismissal.
+
+        Called when the dropdown is dismissed (closed).
+        """
         self.is_open = False
-
-        # Change chevron icon back
         self.chevron.icon = "chevron-down"
-
-        # Animate close
-        anim = Animation(height=0, opacity=0, duration=0.15, t='out_cubic')
-        anim.bind(on_complete=self._remove_dropdown)
-        anim.start(self.dropdown_container)
-
-        # Reset height
-        self.height = dp(52)
-
-    def _remove_dropdown(self, *args) -> None:
-        """
-        Remove the dropdown container from the widget tree.
-
-        Called as a callback after the close animation completes.
-        """
-        if self.dropdown_container and self.dropdown_container.parent:
-            self.remove_widget(self.dropdown_container)
-            self.dropdown_container = None
-
-    def _update_dropdown_graphics(self, instance, value) -> None:
-        """
-        Update dropdown container graphics when position/size changes.
-
-        :param instance: The widget instance that triggered the update.
-        :param value: The new position or size value.
-        """
-        if hasattr(self, '_drop_shadow'):
-            self._drop_shadow.pos = (instance.x + dp(2), instance.y - dp(2))
-            self._drop_shadow.size = instance.size
-            self._drop_bg.pos = instance.pos
-            self._drop_bg.size = instance.size
-            self._drop_border.pos = instance.pos
-            self._drop_border.size = instance.size
-            self._drop_inner.pos = (instance.x + dp(1), instance.y + dp(1))
-            self._drop_inner.size = (instance.width - dp(2), instance.height - dp(2))
+        self._dropdown = None
 
     def _on_item_selected(self, value: str) -> None:
         """
@@ -500,3 +524,9 @@ class StyledDropdown(MDBoxLayout):
 
         if self.on_select_callback:
             self.on_select_callback(value)
+
+    def on_parent(self, instance, parent) -> None:
+        """Clean up dropdown when widget is removed from parent."""
+        if parent is None and self._dropdown:
+            self._dropdown.dismiss()
+            self._dropdown = None

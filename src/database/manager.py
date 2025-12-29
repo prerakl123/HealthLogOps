@@ -585,6 +585,8 @@ class DatabaseManager:
                 "template": {
                     "duration_min": "int",
                     "distance_km": "float",
+                    "incline_percent": "float",
+                    "speed_kmh": "float",
                     "avg_heart_rate": "int"
                 }
             },
@@ -595,7 +597,10 @@ class DatabaseManager:
                     "calories": "int",
                     "protein_g": "float",
                     "carbs_g": "float",
-                    "fat_g": "float"
+                    "fat_g": "float",
+                    "fibers_g": "float",
+                    "good_fat_g": "float",
+                    "supplements": "str"
                 }
             },
             {
@@ -619,6 +624,15 @@ class DatabaseManager:
                 "template": {
                     "weight_kg": "float"
                 }
+            },
+            {
+                "name": "Daily Steps",
+                "icon": "shoe-print",
+                "template": {
+                    "steps": "int",
+                    "distance_km": "float",
+                    "calories_burned": "int"
+                }
             }
         ]
 
@@ -631,3 +645,105 @@ class DatabaseManager:
                 )
             except DatabaseError:
                 pass  # Skip if already exists
+
+    def update_default_categories(self) -> None:
+        """
+        Update existing default categories with latest templates and add new ones.
+
+        This method ensures that:
+            - Existing categories get their templates updated
+            - New default categories are added if they don't exist
+
+        Use this after updating the default category templates to apply
+        changes to existing databases.
+
+        Example:
+            >>> db = DatabaseManager("existing_database.db")
+            >>> db.update_default_categories()
+        """
+        default_categories = [
+            {
+                "name": "Strength Training",
+                "icon": "weight-lifter",
+                "template": {
+                    "sets": "int",
+                    "reps": "int",
+                    "weight_kg": "float"
+                }
+            },
+            {
+                "name": "Cardio",
+                "icon": "run",
+                "template": {
+                    "duration_min": "int",
+                    "distance_km": "float",
+                    "incline_percent": "float",
+                    "speed_kmh": "float",
+                    "avg_heart_rate": "int"
+                }
+            },
+            {
+                "name": "Meal",
+                "icon": "food",
+                "template": {
+                    "calories": "int",
+                    "protein_g": "float",
+                    "carbs_g": "float",
+                    "fat_g": "float",
+                    "fibers_g": "float",
+                    "good_fat_g": "float",
+                    "supplements": "str"
+                }
+            },
+            {
+                "name": "Sleep",
+                "icon": "sleep",
+                "template": {
+                    "hours": "float",
+                    "quality_1_10": "int"
+                }
+            },
+            {
+                "name": "Water Intake",
+                "icon": "water",
+                "template": {
+                    "glasses": "int"
+                }
+            },
+            {
+                "name": "Weight Log",
+                "icon": "scale-bathroom",
+                "template": {
+                    "weight_kg": "float"
+                }
+            },
+            {
+                "name": "Daily Steps",
+                "icon": "shoe-print",
+                "template": {
+                    "steps": "int",
+                    "distance_km": "float",
+                    "calories_burned": "int"
+                }
+            }
+        ]
+
+        existing = {cat["name"]: cat for cat in self.get_all_categories()}
+
+        for cat in default_categories:
+            if cat["name"] in existing:
+                # Update existing category template
+                self.update_category(
+                    category_id=existing[cat["name"]]["id"],
+                    template=cat["template"]
+                )
+            else:
+                # Add new category
+                try:
+                    self.add_category(
+                        name=cat["name"],
+                        icon=cat["icon"],
+                        template=cat["template"]
+                    )
+                except DatabaseError:
+                    pass

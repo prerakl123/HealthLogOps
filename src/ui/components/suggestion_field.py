@@ -6,6 +6,7 @@ that suggests activities based on the selected category.
 
 Classes:
     SuggestionItem: Individual suggestion item in the dropdown.
+    SuggestionPopup: Popup container for suggestion items.
     ActivitySuggestionField: Text field with category-aware suggestions.
 
 Example:
@@ -16,19 +17,19 @@ Example:
 
 from typing import Callable, Optional
 
-from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.graphics import Color, RoundedRectangle
 from kivy.metrics import dp
-from kivy.properties import BooleanProperty, ListProperty, StringProperty
+from kivy.properties import BooleanProperty, ListProperty, NumericProperty, StringProperty
 from kivy.uix.behaviors import ButtonBehavior
+from kivy.uix.modalview import ModalView
+from kivy.uix.scrollview import ScrollView
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.label import MDIcon, MDLabel
 from kivymd.uix.textfield import MDTextField
 
 from ui.constants import (
     ACTIVITY_SUGGESTIONS,
-    DEFAULT_ANIMATION_DURATION,
     MAX_VISIBLE_SUGGESTIONS,
     SUGGESTION_MAX_HEIGHT,
 )
@@ -83,7 +84,7 @@ class SuggestionItem(ButtonBehavior, MDBoxLayout):
         self.padding = [dp(12), dp(8), dp(12), dp(8)]
 
         with self.canvas.before:
-            Color(0, 0, 0, 0)
+            self._bg_color = Color(0, 0, 0, 0)
             self._bg = RoundedRectangle(
                 pos=self.pos,
                 size=self.size,
@@ -130,14 +131,7 @@ class SuggestionItem(ButtonBehavior, MDBoxLayout):
 
         Changes the background color to indicate the pressed state.
         """
-        self.canvas.before.clear()
-        with self.canvas.before:
-            Color(0, 0.59, 0.53, 0.08)
-            self._bg = RoundedRectangle(
-                pos=self.pos,
-                size=self.size,
-                radius=[dp(6)]
-            )
+        self._bg_color.rgba = (0, 0.59, 0.53, 0.08)
 
     def on_release(self) -> None:
         """
@@ -146,16 +140,125 @@ class SuggestionItem(ButtonBehavior, MDBoxLayout):
         Resets the visual state and invokes the on_select callback
         if one was provided during initialization.
         """
-        self.canvas.before.clear()
-        with self.canvas.before:
-            Color(0, 0, 0, 0)
-            self._bg = RoundedRectangle(
-                pos=self.pos,
-                size=self.size,
-                radius=[dp(6)]
-            )
+        self._bg_color.rgba = (0, 0, 0, 0)
         if self.on_select_callback:
             self.on_select_callback(self.text)
+
+
+class SuggestionPopup(ModalView):
+    """
+    A styled suggestion popup that appears below the text field.
+
+    Uses ModalView for proper overlay handling with transparent background.
+    """
+
+    max_height = NumericProperty(dp(SUGGESTION_MAX_HEIGHT))
+    """Maximum height of the suggestion popup."""
+
+    def __init__(self, attached_widget=None, **kwargs):
+        # Set ModalView properties before super().__init__
+        kwargs.setdefault('background', '')
+        kwargs.setdefault('background_color', (0, 0, 0, 0))
+        kwargs.setdefault('overlay_color', (0, 0, 0, 0))
+        kwargs.setdefault('auto_dismiss', False)  # We handle dismiss manually for text fields
+        kwargs.setdefault('size_hint', (None, None))
+
+        super().__init__(**kwargs)
+
+        self._attached_widget = attached_widget
+
+        # Container for items
+        self.container = MDBoxLayout(
+            orientation="vertical",
+            size_hint_y=None,
+            padding=[dp(4), dp(4)],
+            spacing=dp(2),
+        )
+        self.container.bind(minimum_height=self.container.setter('height'))
+
+        # ScrollView for items
+        self.scroll_view = ScrollView(
+            size_hint=(1, 1),
+            do_scroll_x=False,
+            bar_width=dp(3),
+            bar_color=(0, 0.59, 0.53, 0.4),
+        )
+        self.scroll_view.add_widget(self.container)
+
+        # Wrapper with background
+        self.wrapper = MDBoxLayout(
+            orientation="vertical",
+            size_hint=(1, 1),
+        )
+
+        # Add background graphics to wrapper
+        with self.wrapper.canvas.before:
+            Color(0, 0, 0, 0.06)
+            self._shadow = RoundedRectangle(radius=[dp(0), dp(0), dp(10), dp(10)])
+            Color(1, 1, 1, 1)
+            self._bg = RoundedRectangle(radius=[dp(0), dp(0), dp(10), dp(10)])
+            Color(0.90, 0.91, 0.92, 1)
+            self._border = RoundedRectangle(radius=[dp(0), dp(0), dp(10), dp(10)])
+            Color(1, 1, 1, 1)
+            self._inner = RoundedRectangle(radius=[dp(0), dp(0), dp(10), dp(10)])
+
+        self.wrapper.bind(pos=self._update_wrapper_graphics, size=self._update_wrapper_graphics)
+        self.wrapper.add_widget(self.scroll_view)
+        super().add_widget(self.wrapper)
+
+    def _update_wrapper_graphics(self, instance, value):
+        """Update background graphics when position/size changes."""
+        self._shadow.pos = (instance.x + dp(1), instance.y - dp(1))
+        self._shadow.size = instance.size
+        self._bg.pos = instance.pos
+        self._bg.size = instance.size
+        self._border.pos = instance.pos
+        self._border.size = instance.size
+        self._inner.pos = (instance.x + dp(1), instance.y + dp(1))
+        self._inner.size = (instance.width - dp(2), instance.height - dp(2))
+
+    def _align_center(self, *args):
+        """Override ModalView's centering behavior to use custom positioning."""
+        # Do nothing - we handle positioning ourselves in update_position_and_size
+        pass
+
+    def update_position_and_size(self):
+        """Update position and size based on content and attached widget."""
+        if self._attached_widget:
+            # Get position in window coordinates
+            pos = self._attached_widget.to_window(0, 0)
+
+            # Calculate content height
+            content_height = self.container.height + dp(8)
+            target_height = min(content_height, self.max_height)
+
+            # Set size
+            self.width = self._attached_widget.width
+            self.height = target_height
+
+            # Position below the widget
+            self.x = dp(32)
+            self.y = pos[1] + target_height + (self._attached_widget.height / 2) - dp(4)
+
+    def open(self, *args, **kwargs):
+        """Open the popup and position it below the attached widget."""
+        # Position before opening
+        self.update_position_and_size()
+        super().open(*args, **kwargs)
+        # Re-position after open to ensure layout is correct
+        Clock.schedule_once(lambda dt: self.update_position_and_size(), 0)
+
+    def on_open(self):
+        """Ensure positioning after ModalView opens."""
+        self.update_position_and_size()
+
+    def add_item(self, item):
+        """Add a suggestion item to the container."""
+        self.container.add_widget(item)
+
+    def clear_items(self):
+        """Clear all items from the popup."""
+        self.container.clear_widgets()
 
 
 class ActivitySuggestionField(MDBoxLayout):
@@ -200,7 +303,9 @@ class ActivitySuggestionField(MDBoxLayout):
         :param kwargs: Additional keyword arguments passed to MDBoxLayout.
         """
         super().__init__(**kwargs)
-        self.dropdown_container: Optional[MDBoxLayout] = None
+        self._dropdown: Optional[SuggestionPopup] = None
+        self._show_scheduled = None
+        self._hide_scheduled = None
 
         self.orientation = "vertical"
         self.size_hint_y = None
@@ -244,7 +349,7 @@ class ActivitySuggestionField(MDBoxLayout):
         :param instance: The text field instance.
         :param value: The new text value.
         """
-        if self.is_dropdown_open and self.dropdown_container:
+        if self.is_dropdown_open and self._dropdown:
             self._update_filtered_suggestions(value)
 
     def _on_focus_change(self, instance, focused: bool) -> None:
@@ -257,106 +362,58 @@ class ActivitySuggestionField(MDBoxLayout):
         :param instance: The text field instance.
         :param focused: Whether the field is now focused.
         """
+        # Cancel any pending schedules
+        if self._show_scheduled:
+            Clock.unschedule(self._show_scheduled)
+            self._show_scheduled = None
+        if self._hide_scheduled:
+            Clock.unschedule(self._hide_scheduled)
+            self._hide_scheduled = None
+
         if focused and self.suggestions:
-            Clock.schedule_once(lambda dt: self._show_suggestions(), 0.1)
+            self._show_scheduled = Clock.schedule_once(lambda dt: self._show_suggestions(), 0.1)
         else:
-            Clock.schedule_once(lambda dt: self._hide_suggestions(), 0.2)
+            self._hide_scheduled = Clock.schedule_once(lambda dt: self._hide_suggestions(), 0.15)
 
     def _show_suggestions(self) -> None:
         """
-        Show the suggestions dropdown with animation.
-
-        Creates the dropdown container, populates it with filtered
-        suggestions, and animates it into view.
+        Show the suggestions dropdown.
         """
         if self.is_dropdown_open or not self.suggestions:
             return
 
+        # Get filtered suggestions
+        filtered = self._get_filtered_suggestions(self.text_field.text)
+        if not filtered:
+            return
+
         self.is_dropdown_open = True
 
-        self.dropdown_container = MDBoxLayout(
-            orientation="vertical",
-            size_hint_y=None,
-            height=0,
-            padding=[dp(4), dp(4)],
-            spacing=dp(2),
-            opacity=0
-        )
+        # Create popup
+        self._dropdown = SuggestionPopup(attached_widget=self.text_field)
+        self._dropdown.bind(on_dismiss=self._on_dropdown_dismiss)
 
-        # Background
-        with self.dropdown_container.canvas.before:
-            Color(0, 0, 0, 0.03)
-            self._sug_shadow = RoundedRectangle(
-                pos=self.dropdown_container.pos,
-                size=self.dropdown_container.size,
-                radius=[dp(10)]
-            )
-            Color(1, 1, 1, 1)
-            self._sug_bg = RoundedRectangle(
-                pos=self.dropdown_container.pos,
-                size=self.dropdown_container.size,
-                radius=[dp(10)]
-            )
-            Color(0.92, 0.93, 0.94, 1)
-            self._sug_border = RoundedRectangle(
-                pos=self.dropdown_container.pos,
-                size=self.dropdown_container.size,
-                radius=[dp(10)]
-            )
-            Color(1, 1, 1, 1)
-            self._sug_inner = RoundedRectangle(
-                pos=(self.dropdown_container.x + dp(1), self.dropdown_container.y + dp(1)),
-                size=(self.dropdown_container.width - dp(2), self.dropdown_container.height - dp(2)),
-                radius=[dp(9)]
-            )
-
-        self.dropdown_container.bind(
-            pos=self._update_suggestion_graphics,
-            size=self._update_suggestion_graphics
-        )
-
+        # Populate with suggestions
         self._populate_suggestions(self.text_field.text)
-        self.add_widget(self.dropdown_container)
 
-        # Animate
-        filtered_count = len(self._get_filtered_suggestions(self.text_field.text))
-        target_height = min(filtered_count * dp(44) + dp(8), dp(SUGGESTION_MAX_HEIGHT))
-        if target_height > dp(8):
-            anim = Animation(
-                height=target_height,
-                opacity=1,
-                duration=DEFAULT_ANIMATION_DURATION,
-                t='out_cubic'
-            )
-            anim.start(self.dropdown_container)
-            self.height = dp(52) + target_height + dp(8)
+        # Open dropdown
+        self._dropdown.open()
 
     def _hide_suggestions(self) -> None:
         """
-        Hide the suggestions dropdown with animation.
-
-        Animates the dropdown out of view and removes it from
-        the widget tree.
+        Hide the suggestions dropdown.
         """
-        if not self.is_dropdown_open or not self.dropdown_container:
+        if not self.is_dropdown_open or not self._dropdown:
             return
 
+        self._dropdown.dismiss()
+
+    def _on_dropdown_dismiss(self, *args) -> None:
+        """
+        Handle dropdown dismissal.
+        """
         self.is_dropdown_open = False
-
-        anim = Animation(height=0, opacity=0, duration=0.15, t='out_cubic')
-        anim.bind(on_complete=self._remove_suggestions)
-        anim.start(self.dropdown_container)
-        self.height = dp(52)
-
-    def _remove_suggestions(self, *args) -> None:
-        """
-        Remove the suggestions container from the widget tree.
-
-        Called as a callback after the hide animation completes.
-        """
-        if self.dropdown_container and self.dropdown_container.parent:
-            self.remove_widget(self.dropdown_container)
-            self.dropdown_container = None
+        self._dropdown = None
 
     def _get_filtered_suggestions(self, filter_text: str) -> list[str]:
         """
@@ -382,10 +439,10 @@ class ActivitySuggestionField(MDBoxLayout):
 
         :param filter_text: The text to filter suggestions by.
         """
-        if not self.dropdown_container:
+        if not self._dropdown:
             return
 
-        self.dropdown_container.clear_widgets()
+        self._dropdown.clear_items()
         filtered = self._get_filtered_suggestions(filter_text)
 
         for suggestion in filtered:
@@ -393,7 +450,10 @@ class ActivitySuggestionField(MDBoxLayout):
                 text=suggestion,
                 on_select=self._on_suggestion_selected
             )
-            self.dropdown_container.add_widget(item)
+            self._dropdown.add_item(item)
+
+        # Update dropdown position and size
+        self._dropdown.update_position_and_size()
 
     def _update_filtered_suggestions(self, filter_text: str) -> None:
         """
@@ -404,35 +464,16 @@ class ActivitySuggestionField(MDBoxLayout):
 
         :param filter_text: The new filter text.
         """
-        if not self.dropdown_container:
+        if not self._dropdown:
+            return
+
+        filtered = self._get_filtered_suggestions(filter_text)
+
+        if not filtered:
+            self._hide_suggestions()
             return
 
         self._populate_suggestions(filter_text)
-        filtered = self._get_filtered_suggestions(filter_text)
-        target_height = min(len(filtered) * dp(44) + dp(8), dp(SUGGESTION_MAX_HEIGHT))
-
-        if target_height > dp(8):
-            self.dropdown_container.height = target_height
-            self.height = dp(52) + target_height + dp(8)
-        else:
-            self._hide_suggestions()
-
-    def _update_suggestion_graphics(self, instance, value) -> None:
-        """
-        Update suggestion container graphics when position/size changes.
-
-        :param instance: The widget instance that triggered the update.
-        :param value: The new position or size value.
-        """
-        if hasattr(self, '_sug_shadow'):
-            self._sug_shadow.pos = (instance.x + dp(1), instance.y - dp(1))
-            self._sug_shadow.size = instance.size
-            self._sug_bg.pos = instance.pos
-            self._sug_bg.size = instance.size
-            self._sug_border.pos = instance.pos
-            self._sug_border.size = instance.size
-            self._sug_inner.pos = (instance.x + dp(1), instance.y + dp(1))
-            self._sug_inner.size = (instance.width - dp(2), instance.height - dp(2))
 
     def _on_suggestion_selected(self, value: str) -> None:
         """
@@ -445,4 +486,11 @@ class ActivitySuggestionField(MDBoxLayout):
         """
         self.text_field.text = value
         self._hide_suggestions()
-        self.text_field.focus = False
+        # Delay unfocus to allow the selection to complete
+        Clock.schedule_once(lambda dt: setattr(self.text_field, 'focus', False), 0.1)
+
+    def on_parent(self, instance, parent) -> None:
+        """Clean up dropdown when widget is removed from parent."""
+        if parent is None and self._dropdown:
+            self._dropdown.dismiss()
+            self._dropdown = None

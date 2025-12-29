@@ -282,6 +282,9 @@ class DateGroup(MDBoxLayout):
         if not is_expanded:
             self.cards_container.height = 0
             self.cards_container.opacity = 0
+            self.cards_container.disabled = True
+            self.cards_container.size_hint_x = None
+            self.cards_container.width = 0
 
     def _populate_cards(self) -> None:
         """Populate the cards container with swipeable log cards."""
@@ -302,9 +305,15 @@ class DateGroup(MDBoxLayout):
 
         if is_expanded:
             # Expand
+            self.cards_container.disabled = False
+            self.cards_container.size_hint_x = 1
+            self.cards_container.width = self.width
             self.cards_container.opacity = 1
             self.cards_container.height = self.cards_container.minimum_height
         else:
             # Collapse
             self.cards_container.opacity = 0
             self.cards_container.height = 0
+            self.cards_container.disabled = True
+            self.cards_container.size_hint_x = None
+            self.cards_container.width = 0
